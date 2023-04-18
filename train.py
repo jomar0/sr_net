@@ -21,7 +21,7 @@ def train(model, dataloaders, epochs, learning_rate, log_path = None, device='cu
     for epoch in range(epochs):
         epoch_loss = 0.0
         model.train()
-        progress_bar = tqdm(desc=f'Epoch {epoch}/{epochs}', total=len(training_dataloader.dataset), postfix=f'Loss: 0.000')
+        progress_bar = tqdm(desc=f'Epoch {epoch+1}/{epochs}', total=len(training_dataloader.dataset), postfix=f'Loss: 0.000')
         for data in training_dataloader:
             inputs, ground_truths = data
             inputs = inputs.to(device)  # pop them on the GPU
@@ -48,12 +48,12 @@ def train(model, dataloaders, epochs, learning_rate, log_path = None, device='cu
                 ground_truth = ground_truth.to(device)
 
                 output = model(input)
-                
+
                 eval_psnr += psnr(output, ground_truth)
                 eval_ssim += ssim(output, ground_truth)
             eval_psnr /= len(evaluation_dataloader.dataset)
             eval_ssim /= len(evaluation_dataloader.dataset)
-            best.update(epoch=epoch, model=model, psnr=eval_psnr, ssim=eval_ssim)
+            best.update(epoch=epoch+1, model=model, psnr=eval_psnr, ssim=eval_ssim)
         progress_bar.close()
         status = f"Epoch {epoch+1}/{epochs}, Loss: {epoch_loss:.6f}, PSNR: {eval_psnr:.2f} dB, SSIM: {eval_ssim:.2f}"
         print(status)
