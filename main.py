@@ -14,6 +14,7 @@ parser.add_argument("name", type=str, help="Name of the program")
 parser.add_argument("model_name", type=str, help="Name of the model")
 parser.add_argument("feature_dimension", type=int, help="Dimension of the feature space")
 parser.add_argument("shrinking_filters", type=int, help="Number of shrinking filters")
+parser.add_argument("mapping_depth", type=int, help="mapping depth")
 parser.add_argument("epochs", type=int, help="Number of training epochs")
 parser.add_argument("learning_rate", type=float, help="Learning rate for the optimizer")
 parser.add_argument("batch_size", type=int, help="Batch size")
@@ -27,6 +28,7 @@ name = args.name
 model_name = args.model_name
 feature_dimension = args.feature_dimension
 shrinking_filters = args.shrinking_filters
+mapping_depth= args.mapping_depth
 epochs = args.epochs
 learning_rate = args.learning_rate
 batch_size= args.batch_size
@@ -36,11 +38,11 @@ training_dataset = ImagePairs("F:/ImagePairs/training")
 evaluation_dataset = ImagePairs("F:/ImagePairs/evaluation")
 
 if model_name == "FSRCNN":
-    model = FSRCNN(feature_dimension=feature_dimension, shrinking_filters=shrinking_filters, types=types)
+    model = FSRCNN(feature_dimension=feature_dimension, shrinking_filters=shrinking_filters, mapping_depth=mapping_depth, types=types)
 elif model_name == "ResNet1":
-    model = ResNet1(feature_dimension=feature_dimension, shrinking_filters=shrinking_filters, types=types)
+    model = ResNet1(feature_dimension=feature_dimension, shrinking_filters=shrinking_filters,mapping_depth=mapping_depth, types=types)
 elif model_name == "ResNet2":
-    model = ResNet2(feature_dimension=feature_dimension, shrinking_filters=shrinking_filters, types=types)
+    model = ResNet2(feature_dimension=feature_dimension, shrinking_filters=shrinking_filters,mapping_depth=mapping_depth, types=types)
 else:
     raise Exception("Not a valid model")
 
@@ -56,6 +58,7 @@ with open(log_path, "a") as file:
     file.write(f"Model name: {model_name}\n")
     file.write(f"Feature dimension: {feature_dimension}\n")
     file.write(f"Shrinking filters: {shrinking_filters}\n")
+    file.write(f"Mapping Depth: {mapping_depth}\n")
     file.write(f"Epochs: {epochs}\n")
     file.write(f"Learning rate: {learning_rate}\n")
     file.write(f"Types: {types}\n")
@@ -66,6 +69,7 @@ print(f"Training Session {name}")
 print(f"Name: {name}")
 print(f"Model name: {model_name}")
 print(f"Feature dimension: {feature_dimension}")
+print(f"Mapping Depth: {mapping_depth}\n")
 print(f"Shrinking filters: {shrinking_filters}")
 print(f"Epochs: {epochs}")
 print(f"Learning rate: {learning_rate}")
