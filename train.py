@@ -3,21 +3,12 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from utils import psnr, BestModel
+from utils import psnr, BestModel, ssim
 import statistics
 import copy
+import os
 
-
-    
-def create_dataloaders(training_dataset, evaluation_dataset, batch_size=16, num_workers=5):
-    training_dataloader = DataLoader(dataset=training_dataset, batch_size=batch_size, num_workers=num_workers, pin_memory=True)
-
-    evaluation_dataloader = DataLoader(
-        dataset=evaluation_dataset, batch_size=1, num_workers=num_workers, pin_memory=True)
-
-    return training_dataloader, evaluation_dataloader
-
-def train(model, dataloaders, epochs, learning_rate, device='cuda'):
+def train(model, dataloaders, epochs, learning_rate, log_path = None, device='cuda'):
     best = BestModel()
     criterion = nn.MSELoss()
     optimiser = optim.Adam(params=model.parameters(), lr=learning_rate)
@@ -45,24 +36,31 @@ def train(model, dataloaders, epochs, learning_rate, device='cuda'):
             progress_bar.update(len(inputs))
             epoch_loss += loss.item() * inputs.size(0)  # update loss
             loss_so_far = epoch_loss / progress_bar.n
-            progress_bar.set_postfix_str(f'Loss: {loss_so_far:.4f}')
+            progress_bar.set_postfix_str(f'Loss: {loss_so_far:.6f}')
         epoch_loss /= len(training_dataloader.dataset)  # calc loss || |_
 
         model.eval()
         eval_psnr = 0.0
+        eval_ssim = 0.0
         with torch.no_grad():
             for input, ground_truth in evaluation_dataloader:
-                input = input.cuda()  # pop them on the GPU, again
-                ground_truth = ground_truth.cuda()
+                input = input.to(device)  # pop them on the GPU, again
+                ground_truth = ground_truth.to(device)
 
                 output = model(input)
-
+                
                 eval_psnr += psnr(output, ground_truth)
-            eval_psnr / + len(evaluation_dataloader.dataset)
-            best.update(epoch=epoch, model=model, psnr=eval_psnr)
+                eval_ssim += ssim(output, ground_truth)
+            eval_psnr /= len(evaluation_dataloader.dataset)
+            eval_ssim /= len(evaluation_dataloader.dataset)
+            best.update(epoch=epoch, model=model, psnr=eval_psnr, ssim=eval_ssim)
         progress_bar.close()
-        print(
-            f"Epoch {epoch+1}/{epochs}, Loss: {epoch_loss:.4f}, PSNR: {eval_psnr:.2f} dB")
+        status = f"Epoch {epoch+1}/{epochs}, Loss: {epoch_loss:.6f}, PSNR: {eval_psnr:.2f} dB, SSIM: {eval_ssim:.2f}"
+        print(status)
+        if log_path is not None:
+            if os.path.exists(log_path):
+                with open(log_path, "a") as file:
+                    file.write(status + "\n")
     return best
 
 

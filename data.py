@@ -10,7 +10,7 @@ class ImagePairs(Dataset):
         self.directory = Path(dataset_directory)
         self.count = len(list((self.directory / 'HR').glob('*.png')))
         self.transforms = transforms.Compose([
-            transforms.Lambda(utils.__extract_y__),
+            transforms.Lambda(utils.extract_y),
             transforms.ToTensor()
         ])
 
