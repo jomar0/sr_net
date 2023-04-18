@@ -34,8 +34,8 @@ learning_rate = args.learning_rate
 batch_size= args.batch_size
 types = args.types
 
-training_dataset = ImagePairs("/home/u1909943/ImagePairs/training")
-evaluation_dataset = ImagePairs("/home/u1909943/ImagePairs/evaluation")
+training_dataset = ImagePairs("/home/u1909943/MSc/ImagePairs/training")
+evaluation_dataset = ImagePairs("/home/u1909943/MSc/ImagePairs/evaluation")
 
 if model_name == "FSRCNN":
     model = FSRCNN(feature_dimension=feature_dimension, shrinking_filters=shrinking_filters, mapping_depth=mapping_depth, types=types)
