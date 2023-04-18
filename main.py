@@ -34,8 +34,8 @@ learning_rate = args.learning_rate
 batch_size= args.batch_size
 types = args.types
 
-training_dataset = ImagePairs("F:/ImagePairs/training")
-evaluation_dataset = ImagePairs("F:/ImagePairs/evaluation")
+training_dataset = ImagePairs("/home/u1909943/ImagePairs/training")
+evaluation_dataset = ImagePairs("/home/u1909943/ImagePairs/evaluation")
 
 if model_name == "FSRCNN":
     model = FSRCNN(feature_dimension=feature_dimension, shrinking_filters=shrinking_filters, mapping_depth=mapping_depth, types=types)
@@ -46,9 +46,9 @@ elif model_name == "ResNet2":
 else:
     raise Exception("Not a valid model")
 
-log_path=f"~/MSc/results/{name}.log"
-if not os.path.exists(f"~/MSc/results/{name}/"):
-    os.makedirs(f"~/MSc/results/{name}/")
+log_path=f"/home/u1909943/MSc/results/{name}.log"
+if not os.path.exists(f"/home/u1909943/MSc/results/{name}/"):
+    os.makedirs(f"/home/u1909943/MSc/results/{name}/")
 
 # file.write the arguments
 with open(log_path, "a") as file:
@@ -61,6 +61,7 @@ with open(log_path, "a") as file:
     file.write(f"Mapping Depth: {mapping_depth}\n")
     file.write(f"Epochs: {epochs}\n")
     file.write(f"Learning rate: {learning_rate}\n")
+    file.write(f"Batch Size: {batch_size}\n")
     file.write(f"Types: {types}\n")
     file.write("="*80 + "\n")
 
@@ -69,10 +70,11 @@ print(f"Training Session {name}")
 print(f"Name: {name}")
 print(f"Model name: {model_name}")
 print(f"Feature dimension: {feature_dimension}")
-print(f"Mapping Depth: {mapping_depth}\n")
+print(f"Mapping Depth: {mapping_depth}")
 print(f"Shrinking filters: {shrinking_filters}")
 print(f"Epochs: {epochs}")
 print(f"Learning rate: {learning_rate}")
+print(f"Batch Size: {batch_size}")
 print(f"Types: {types}")
 print("="*80)
 
@@ -106,5 +108,5 @@ print(f"Took {formatted_time}")
 print(f"Best Epoch for PSNR: {best.best_epoch_psnr} - PSNR: {best.best_psnr} -  # of Parameters: {psnr_params}")
 print(f"Best Epoch for SSIM: {best.best_epoch_ssim} - SSIM: {best.best_ssim} -  # of Parameters: {ssim_params}")
 
-best.save(path=f"~/MSc/results/{name}.model")
+best.save(path=f"/home/u1909943/MSc/results/{name}/{name}.model")
 
