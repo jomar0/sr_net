@@ -38,11 +38,9 @@ def psnr(y_pred, y_true):
     mse = np.mean((y_true - y_pred) ** 2)
 
     # Calculate maximum pixel value
-    max_pixel = 1.0 if y_true.dtype == np.float32 else 255.0
 
     # Calculate value in dB
-    value = 20 * np.log10(max_pixel) - 10 * np.log10(mse)
-
+    value = 20 * np.log10(1.0) - 10 * np.log10(mse)
     return value
 
 class BestModel:

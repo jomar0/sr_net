@@ -46,7 +46,7 @@ elif model_name == "ResNet2":
 else:
     raise Exception("Not a valid model")
 
-log_path=f"/home/u1909943/MSc/results/{name}.log"
+log_path=f"/home/u1909943/MSc/results/{name}/{name}.log"
 if not os.path.exists(f"/home/u1909943/MSc/results/{name}/"):
     os.makedirs(f"/home/u1909943/MSc/results/{name}/")
 
