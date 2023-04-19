@@ -55,7 +55,7 @@ def train(model, dataloaders, epochs, learning_rate, log_path = None, device='cu
             eval_ssim /= len(evaluation_dataloader.dataset)
             best.update(epoch=epoch+1, model=model, psnr=eval_psnr, ssim=eval_ssim)
         progress_bar.close()
-        status = f"Epoch {epoch+1}/{epochs}, Loss: {epoch_loss:.6f}, PSNR: {eval_psnr:.2f} dB, SSIM: {eval_ssim:.2f}"
+        status = f"Epoch {epoch+1}/{epochs}, Loss: {epoch_loss:.6f}, PSNR: {eval_psnr:.6f} dB, SSIM: {eval_ssim:.6f}"
         print(status)
         if log_path is not None:
             if os.path.exists(log_path):
