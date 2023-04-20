@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 import copy
 import os
 from torch.utils.data import DataLoader
@@ -42,6 +43,80 @@ def psnr(y_pred, y_true):
     # Calculate value in dB
     value = 20 * np.log10(1.0) - 10 * np.log10(mse)
     return value
+
+def parse_loss(loss='mse', args=None):
+    if loss=='mse':
+        return nn.MSELoss()
+    elif loss=='l1' or loss=='mae':
+        return nn.L1Loss()
+    elif loss=='huber':
+        if args is None:
+            return nn.HuberLoss()
+        else:
+            return nn.HuberLoss(args[0], args[1])
+    elif loss=='smoothl1':
+        if args is None:
+            return nn.SmoothL1Loss()
+        else:
+            return nn.SmoothL1Loss(args[0], args[1], args[2], args[3])
+    elif loss=='ssim':
+        if args is None:
+            return SSIMLoss()
+        else:
+            return SSIMLoss(args[0], args[1])
+    else: raise ValueError(f"No loss function called {loss}")
+
+class SSIMLoss(nn.Module):
+    def __init__(self, window_size=11, size_average=True):
+        super(SSIMLoss, self).__init__()
+        self.window_size = window_size
+        self.size_average = size_average
+        self.channel = 1
+
+    def create_window(self):
+        # Create a 1D Gaussian window
+        window = torch.Tensor([np.exp(-(x - self.window_size//2)**2/float(2*2)) for x in range(self.window_size)])
+        # Make it 2D
+        window_2d = window.outer(window)
+        # Make it 3D with one channel
+        window_3d = window_2d.unsqueeze(0).unsqueeze(0)
+        # Repeat the 3D window for all channels
+        window_3d = window_3d.repeat(self.channel, 1, 1, 1)
+        return window_3d
+
+    def forward(self, img1, img2):
+        if len(img1.shape) != 4 or len(img2.shape) != 4:
+            raise ValueError("Input tensors must have a batch dimension")
+
+        if img1.shape != img2.shape:
+            raise ValueError("Input tensors must have the same shape")
+
+        if img1.shape[1] != 1:
+            raise ValueError("Input tensors must be grayscale")
+
+        window = self.create_window()
+
+        mu1 = F.conv2d(img1, window, padding=self.window_size//2, groups=self.channel)
+        mu2 = F.conv2d(img2, window, padding=self.window_size//2, groups=self.channel)
+
+        mu1_sq = mu1.pow(2)
+        mu2_sq = mu2.pow(2)
+        mu1_mu2 = mu1 * mu2
+
+        sigma1_sq = F.conv2d(img1 * img1, window, padding=self.window_size//2, groups=self.channel) - mu1_sq
+        sigma2_sq = F.conv2d(img2 * img2, window, padding=self.window_size//2, groups=self.channel) - mu2_sq
+        sigma12 = F.conv2d(img1 * img2, window, padding=self.window_size//2, groups=self.channel) - mu1_mu2
+
+        c1 = (0.01 * 255)**2
+        c2 = (0.03 * 255)**2
+
+        ssim_map = ((2 * mu1_mu2 + c1) * (2 * sigma12 + c2)) / ((mu1_sq + mu2_sq + c1) * (sigma1_sq + sigma2_sq + c2))
+
+        if self.size_average:
+            return torch.mean((1 - ssim_map) / 2)
+        else:
+            return torch.sum((1 - ssim_map) / 2)
+
 
 class BestModel:
     def __init__(self, path=None):
