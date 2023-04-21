@@ -40,9 +40,9 @@ evaluation_dataset = ImagePairs("/home/u1909943/MSc/ImagePairs/evaluation")
 if model_name == "FSRCNN":
     model = FSRCNN(feature_dimension=feature_dimension, shrinking_filters=shrinking_filters, mapping_depth=mapping_depth, types=types)
 elif model_name == "ResNet1":
-    model = ResNet1(feature_dimension=feature_dimension, shrinking_filters=shrinking_filters,mapping_depth=mapping_depth, types=types)
+    model = FSRCNN_ResNet1(feature_dimension=feature_dimension, shrinking_filters=shrinking_filters,mapping_depth=mapping_depth, types=types)
 elif model_name == "ResNet2":
-    model = ResNet2(feature_dimension=feature_dimension, shrinking_filters=shrinking_filters,mapping_depth=mapping_depth, types=types)
+    model = FSRCNN_ResNet2(feature_dimension=feature_dimension, shrinking_filters=shrinking_filters,mapping_depth=mapping_depth, types=types)
 else:
     raise Exception("Not a valid model")
 
