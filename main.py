@@ -109,35 +109,35 @@ def create_model(args):
                 feature_channels=model_config["feature_channels"],
                 shrinking_channels=model_config["shrinking_channels"],
                 mapping_depth=model_config["mapping_depth"],
-                types=model_config["types"],
-                kernels=[model_config["kernels"]],
+                types=[tuple(x) for x in model_config["types"]],
+                kernels=[tuple(x) for x in model_config["kernels"]],
             )
         elif subclass == "ShrinkNet_Residual2":
             return ShrinkNet_Residual2(
                 feature_channels=model_config["feature_channels"],
                 shrinking_channels=model_config["shrinking_channels"],
                 mapping_depth=model_config["mapping_depth"],
-                types=model_config["types"],
-                kernels=[model_config["kernels"]],
+                types=[tuple(x) for x in model_config["types"]],
+                kernels=[tuple(x) for x in model_config["kernels"]],
             )
         elif subclass == "ShrinkNet_Residual3":
             return ShrinkNet_Residual3(
                 feature_channels=model_config["feature_channels"],
                 shrinking_channels=model_config["shrinking_channels"],
                 mapping_depth=model_config["mapping_depth"],
-                types=model_config["types"],
-                kernels=[model_config["kernels"]],
+                types=[tuple(x) for x in model_config["types"]],
+                kernels=[tuple(x) for x in model_config["kernels"]],
             )
         else:
             return ShrinkNet(
                 feature_channels=model_config["feature_channels"],
                 shrinking_channels=model_config["shrinking_channels"],
                 mapping_depth=model_config["mapping_depth"],
-                types=model_config["types"],
-                kernels=[model_config["kernels"]],
+                types=[tuple(x) for x in model_config["types"]],
+                kernels=[tuple(x) for x in model_config["kernels"]],
             )
     elif superclass == "EVNet":
-        return EVNet(kernels=model_config["kernels"], channels=model_config["channels"])
+        return EVNet(kernels=[tuple(x) for x in model_config["kernels"]], channels=model_config["channels"])
     elif superclass == "ResBlockNet":
         return ResBlockNet(config=model_config)
 
