@@ -65,6 +65,7 @@ class Shrinking_BaseNet(nn.Module):
 
     def __initialise(self, module):
         nn.init.xavier_normal_(module.weight)
+        return module
 
         # Generate mapping layer
 
