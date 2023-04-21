@@ -1,114 +1,213 @@
 from data import ImagePairs
 from train import *
 from shrinking_based import *
+from evnet import *
+from nonshrinking_based import *
 import os
 from torch import nn
 import time
-from utils import BestModel, create_dataloaders
+from utils import BestModel, create_dataloaders, SSIMLoss
 import argparse
-
-# Create the parser
-parser = argparse.ArgumentParser(description="Trainer for SRNET")
-
-# Add the arguments
-parser.add_argument("--name", type=str, help="Name of the program")
-parser.add_argument("--net", type=str, help="Name of the model")
-parser.add_argument("feature_dimension", type=int, help="Dimension of the feature space")
-parser.add_argument("shrinking_filters", type=int, help="Number of shrinking filters")
-parser.add_argument("mapping_depth", type=int, help="mapping depth")
-parser.add_argument("epochs", type=int, help="Number of training epochs")
-parser.add_argument("learning_rate", type=float, help="Learning rate for the optimizer")
-parser.add_argument("batch_size", type=int, help="Batch size")
-parser.add_argument("types", nargs="+", type=str, help="List of types")
-
-# Parse the arguments
-args = parser.parse_args()
-
-# Access the arguments
-name = args.name
-model_name = args.model_name
-feature_dimension = args.feature_dimension
-shrinking_filters = args.shrinking_filters
-mapping_depth= args.mapping_depth
-epochs = args.epochs
-learning_rate = args.learning_rate
-batch_size= args.batch_size
-types = args.types
-
-training_dataset = ImagePairs("/home/u1909943/MSc/ImagePairs/training")
-evaluation_dataset = ImagePairs("/home/u1909943/MSc/ImagePairs/evaluation")
-
-if model_name == "FSRCNN":
-    model = FSRCNN(feature_dimension=feature_dimension, shrinking_filters=shrinking_filters, mapping_depth=mapping_depth, types=types)
-elif model_name == "ResNet1":
-    model = FSRCNN_ResNet1(feature_dimension=feature_dimension, shrinking_filters=shrinking_filters,mapping_depth=mapping_depth, types=types)
-elif model_name == "ResNet2":
-    model = FSRCNN_ResNet2(feature_dimension=feature_dimension, shrinking_filters=shrinking_filters,mapping_depth=mapping_depth, types=types)
-else:
-    raise Exception("Not a valid model")
+import json
+import shutil
 
 
-log_path=f"/home/u1909943/MSc/results/{name}/{name}.log"
-if not os.path.exists(f"/home/u1909943/MSc/results/{name}/"):
-    os.makedirs(f"/home/u1909943/MSc/results/{name}/")
+def read_json_file(file_path):
+    if not os.path.isfile(file_path):
+        raise FileNotFoundError(f"File '{file_path}' not found")
+    with open(file_path) as json_file:
+        data = json.load(json_file)
+    return data
+
+
+def create_datasets(dataset_root_path):
+    # Check if the directory exists
+    if not os.path.isdir(dataset_root_path):
+        raise NotADirectoryError(
+            f"{dataset_root_path} is not a directory or does not exist"
+        )
+
+    # Check if the expected subdirectories exist and save their paths to variables
+    training_path = os.path.join(dataset_root_path, "training")
+    if not os.path.isdir(training_path):
+        raise NotADirectoryError(
+            f"{training_path} is not a directory or does not exist"
+        )
+
+    testing_path = os.path.join(dataset_root_path, "testing")
+    if not os.path.isdir(testing_path):
+        raise NotADirectoryError(f"{testing_path} is not a directory or does not exist")
+
+    evaluation_path = os.path.join(dataset_root_path, "evaluation")
+    if not os.path.isdir(evaluation_path):
+        raise NotADirectoryError(
+            f"{evaluation_path} is not a directory or does not exist"
+        )
+
+    # Check if the expected sub-subdirectories exist
+    for subdir_path in [training_path, testing_path, evaluation_path]:
+        subsubdirs = ["HR", "LR"]
+        for subsubdir in subsubdirs:
+            subsubdir_path = os.path.join(subdir_path, subsubdir)
+            if not os.path.isdir(subsubdir_path):
+                raise NotADirectoryError(
+                    f"{subsubdir_path} is not a directory or does not exist"
+                )
+    return (
+        ImagePairs(training_path),
+        ImagePairs(evaluation_path),
+        ImagePairs(testing_path),
+    )
+
+
+def create_log_directory(log_path, name):
+    directory_path = os.path.join(log_path, name)
+
+    # Create directory if it doesn't exist
+    if not os.path.exists(directory_path):
+        os.makedirs(directory_path)
+
+
+def create_model(args):
+    # Parse model name
+    model_name = args["model"]["name"]
+    if ":" in model_name:
+        superclass, subclass = model_name.split(":")
+    else:
+        superclass = model_name
+        subclass = None
+
+    # Get model configuration
+    model_config = args["model"]["args"]
+
+    # Validate model configuration
+    if superclass == "ShrinkNet":
+        required_params = [
+            "feature_channels",
+            "shrinking_channels",
+            "mapping_depth",
+            "kernels",
+            "types",
+        ]
+    elif superclass == "EVNet":
+        required_params = ["kernels", "channels"]
+    elif superclass == "ResBlockNet":
+        required_params = ["config"]
+    else:
+        raise ValueError(f"Invalid model superclass: {superclass}")
+
+    for param in required_params:
+        if param not in model_config:
+            raise ValueError(
+                f"Missing required parameter '{param}' for model '{model_name}'"
+            )
+
+    # Call appropriate subfunction to create model object instance
+    if superclass == "ShrinkNet":
+        if subclass == "ShrinkNet_Residual1":
+            return ShrinkNet_Residual1(
+                feature_channels=model_config["feature_channels"],
+                shrinking_channels=model_config["shrinking_channels"],
+                mapping_depth=model_config["mapping_depth"],
+                types=model_config["types"],
+                kernels=[model_config["kernels"]],
+            )
+        elif subclass == "ShrinkNet_Residual2":
+            return ShrinkNet_Residual2(
+                feature_channels=model_config["feature_channels"],
+                shrinking_channels=model_config["shrinking_channels"],
+                mapping_depth=model_config["mapping_depth"],
+                types=model_config["types"],
+                kernels=[model_config["kernels"]],
+            )
+        elif subclass == "ShrinkNet_Residual3":
+            return ShrinkNet_Residual3(
+                feature_channels=model_config["feature_channels"],
+                shrinking_channels=model_config["shrinking_channels"],
+                mapping_depth=model_config["mapping_depth"],
+                types=model_config["types"],
+                kernels=[model_config["kernels"]],
+            )
+        else:
+            return ShrinkNet(
+                feature_channels=model_config["feature_channels"],
+                shrinking_channels=model_config["shrinking_channels"],
+                mapping_depth=model_config["mapping_depth"],
+                types=model_config["types"],
+                kernels=[model_config["kernels"]],
+            )
+    elif superclass == "EVNet":
+        return EVNet(kernels=model_config["kernels"], channels=model_config["channels"])
+    elif superclass == "ResBlockNet":
+        return ResBlockNet(config=model_config)
+
+
+def create_loss(loss_dict):
+    loss_name = loss_dict["name"]
+    if loss_name in ["l1", "mae"]:
+        loss_func = nn.L1Loss
+    elif loss_name in ["l2", "mse"]:
+        loss_func = nn.MSELoss
+    elif loss_name == "huber":
+        loss_func = nn.SmoothL1Loss
+    elif loss_name in ["smoothl1", "char"]:
+        loss_func = nn.SmoothL1Loss
+    elif loss_name == "SSIM":
+        # You'll need to define your own custom SSIMLoss class
+        # and import it here.
+        loss_func = SSIMLoss
+    else:
+        raise ValueError(f"Invalid loss name: {loss_name}")
+
+    if "args" in loss_dict:
+        args = loss_dict["args"]
+        try:
+            loss_func = loss_func(**args)
+        except TypeError as e:
+            raise ValueError(
+                f"Invalid arguments for loss function {loss_name}: {args}"
+            ) from e
+
+    return loss_func
+
+
+parser = argparse.ArgumentParser(description="Trainer for SRNETs")
+parser.add_argument("--args", type=str, help="Program Argment json path")
+cmd_args = parser.parse_args()
+args = read_json_file(cmd_args.args)
+
+training, evaluation, testing = create_datasets(args["dataset"])
+log_path, model_path = create_log_directory(args["log_path"], args["name"])
+model = create_model(args)
+loss = create_loss(args["loss"])
 
 # file.write the arguments
+open(log_path, "w").close() # delete content
 with open(log_path, "a") as file:
-    file.write("="*80 + "\n")
-    file.write(f"Log File for Training Session {name}\n")
-    file.write(f"Name: {name}\n")
-    file.write(f"Model name: {model_name}\n")
-    file.write(f"Feature dimension: {feature_dimension}\n")
-    file.write(f"Shrinking filters: {shrinking_filters}\n")
-    file.write(f"Mapping Depth: {mapping_depth}\n")
-    file.write(f"Epochs: {epochs}\n")
-    file.write(f"Learning rate: {learning_rate}\n")
-    file.write(f"Batch Size: {batch_size}\n")
-    file.write(f"Types: {types}\n")
-    file.write("="*80 + "\n")
+    file.write("=" * 80 + "\n")
+    file.write(f"Log File for Training Session\n")
 
-print("="*80)
-print(f"Training Session {name}")
-print(f"Name: {name}")
-print(f"Model name: {model_name}")
-print(f"Feature dimension: {feature_dimension}")
-print(f"Mapping Depth: {mapping_depth}")
-print(f"Shrinking filters: {shrinking_filters}")
-print(f"Epochs: {epochs}")
-print(f"Learning rate: {learning_rate}")
-print(f"Batch Size: {batch_size}")
-print(f"Types: {types}")
-print("="*80)
+    file.write("=" * 80 + "\n")
+
+print("=" * 80)
+print(f"{json.dumps(args, indent=True)}\n")
+print("=" * 80)
 
 
 start = time.time()
-best = train(model=model, dataloaders=create_dataloaders(training_dataset, evaluation_dataset, num_workers=0, batch_size=batch_size), epochs=epochs, learning_rate=learning_rate, 
-log_path=log_path)
+results = train(
+    model=model,
+    dataloaders=create_dataloaders(
+        training, evaluation, num_workers=0, batch_size=args["batch_size"]
+    ),
+    epochs=args["epochs"],
+    learning_rate=args["learning_rate"],
+    log_path=log_path,
+)
 
 elapsed = time.time() - start
 formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed))
 
-model.cpu()
-model.load_state_dict(best.best_model_psnr)
-
-psnr_params = sum(
-	param.numel() for param in model.parameters()
-)
-
-model.load_state_dict(best.best_model_ssim)
-ssim_params = sum(
-	param.numel() for param in model.parameters()
-)
 
 
-with open(log_path, "a") as file:
-    file.write(f"\n\nTook {formatted_time}\n")
-    file.write(f"Best Epoch for PSNR: {best.best_epoch_psnr} - PSNR: {best.best_psnr} -  # of Parameters: {psnr_params}\n")
-    file.write(f"Best Epoch for SSIM: {best.best_epoch_ssim} - SSIM: {best.best_ssim} -  # of Parameters: {ssim_params}\n")
-
-print(f"Took {formatted_time}")
-print(f"Best Epoch for PSNR: {best.best_epoch_psnr} - PSNR: {best.best_psnr} -  # of Parameters: {psnr_params}")
-print(f"Best Epoch for SSIM: {best.best_epoch_ssim} - SSIM: {best.best_ssim} -  # of Parameters: {ssim_params}")
-
-best.save(path=f"/home/u1909943/MSc/results/{name}/{name}.model")
 

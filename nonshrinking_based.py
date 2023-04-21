@@ -1,11 +1,16 @@
 from torch import nn
 import brevitas.nn as qnn
 from prefabs import ConvBlock
+import inspect
 
 
-class NoShrinkNet(nn.Module):
-    def __init__(self, config: dict, num_map_blocks):
-        super(NoShrinkNet, self)
+class ResBlockNet(nn.Module):
+    def __init__(self, config: dict, **kwargs):
+        argspec = inspect.getfullargspec(self.__init__)[0][1:]
+        argdict = dict(zip(argspec, argspec))
+        argdict.update(kwargs)
+        self.args = argdict
+        super(ResBlockNet, self)
         self.input_layer = ConvBlock(
             in_channels=config["input_layer"]["in_channels"],
             out_channels=config["input_layer"]["out_channels"],
@@ -13,7 +18,7 @@ class NoShrinkNet(nn.Module):
             type="conv",
         )
         self.map_blocks = nn.ModuleList()
-        for i in range(num_map_blocks):
+        for i in range(len(config["mapping_blocks"])):
             self.map_blocks.append(
                 nn.Sequential(
                     ConvBlock(

@@ -1,45 +1,50 @@
 from torch import nn
 import brevitas.nn as qnn
 from prefabs import ConvBlock
+import inspect
 
 # Basic architecture for FSRCNN, with compression layers
 
 
-class Shrinking_BaseNet(nn.Module):
+class ShrinkNet(nn.Module):
     def __init__(
         self,
-        channels=1,
-        feature_dimension=56,
-        shrinking_filters=12,
+        feature_channels=56,
+        shrinking_channels=12,
         mapping_depth=4,
         types=["conv", "conv", "conv", "conv"],
         kernels=((5, 5), (5, 5), (3, 3), (1, 1), (9, 9)),
+        **kwargs
     ):
-        super(Shrinking_BaseNet, self).__init__()
+        argspec = inspect.getfullargspec(self.__init__)[0][1:]
+        argdict = dict(zip(argspec, argspec))
+        argdict.update(kwargs)
+        self.args = argdict
+        super(ShrinkNet, self).__init__()
 
-        self.channels = channels
-        self.feature_dimension = feature_dimension
-        self.shrinking_filters = shrinking_filters
+        self.channels = 1
+        self.feature_channels = feature_channels
+        self.shrinking_channels = shrinking_channels
         self.mapping_depth = mapping_depth
         self.types = types
         self.kernels = kernels
 
         # First Part of FSRCNN, the Feature Extraction
         self.feature_extraction = ConvBlock(
-            self.channels, self.feature_dimension, kernel_size=self.kernels[0], type=self.types[0]
+            self.channels, self.feature_channels, kernel_size=self.kernels[0], type=self.types[0]
         )
 
         # Shrinking
         self.shrinking = ConvBlock(
-            in_channels=self.feature_dimension,
-            out_channels=self.shrinking_filters,
+            in_channels=self.feature_channels,
+            out_channels=self.shrinking_channels,
             kernel_size=self.kernels[1],
             type=self.types[1],
         )
 
         # Mapping (Residual Layer)
         self.mapping = self.__generate_mapping(
-            shrinking_filters=self.shrinking_filters,
+            shrinking_channels=self.shrinking_channels,
             mapping_depth=self.mapping_depth,
             type=self.types[2],
             kernel=self.kernels[2]
@@ -47,15 +52,15 @@ class Shrinking_BaseNet(nn.Module):
 
         # Expanding
         self.expanding = ConvBlock(
-            in_channels=self.shrinking_filters,
-            out_channels=self.feature_dimension,
+            in_channels=self.shrinking_channels,
+            out_channels=self.feature_channels,
             kernel_size=self.kernels[3],
             type=self.types[3],
         )
 
         # Deconv
         self.deconvolution = self.__initialise(qnn.QuantConvTranspose2d(
-            in_channels=self.feature_dimension,
+            in_channels=self.feature_channels,
             out_channels=self.channels,
             kernel_size=self.kernels[4],
             padding=self.kernels[4][0] // 2,
@@ -69,23 +74,31 @@ class Shrinking_BaseNet(nn.Module):
 
         # Generate mapping layer
 
-    def __generate_mapping(self, shrinking_filters, mapping_depth, type, kernel):
+    def __generate_mapping(self, shrinking_channels, mapping_depth, type, kernel):
         to_return = list([])
         for _ in range(mapping_depth):
             to_return.append(
                 ConvBlock(
-                    in_channels=shrinking_filters,
-                    out_channels=shrinking_filters,
+                    in_channels=shrinking_channels,
+                    out_channels=shrinking_channels,
                     kernel_size=kernel,
                     type=type,
                 )
             )
         return nn.Sequential(*to_return)
+    
+    def forward(self, out):
+        out = self.feature_extraction(out)
+        out = self.shrinking(out)
+        out = self.mapping(out)
+        out = self.expanding(out)
+        out = self.deconvolution(out)
+        return out
 
 
-# FSRCNN_ResNet1:
-# FSRCNN_ResNet1 makes the Mapping block a single residual block with a connection bypassing the whole mapping block
-class FSRCNN_ResNet1(Shrinking_BaseNet):
+# ShrinkNet_Residual1:
+# ShrinkNet_Residual1 makes the Mapping block a single residual block with a connection bypassing the whole mapping block
+class ShrinkNet_Residual1(ShrinkNet):
     # FSRCNN_ResNet with variable Residual Mapping Layers.
     def forward(self, out):
         out = self.feature_extraction(out)
@@ -96,58 +109,42 @@ class FSRCNN_ResNet1(Shrinking_BaseNet):
         return out
 
 
+# ShrinkNet_Residual2:
+# ShrinkNet_Residual2 introduces a skip connection over each mapping layer in the mapping block individually
 
-
-# FSRCNN with no residual connections
-
-
-class FSRCNN(Shrinking_BaseNet):
-    def forward(self, out):
-        out = self.feature_extraction(out)
-        out = self.shrinking(out)
-        out = self.mapping(out)
-        out = self.expanding(out)
-        out = self.deconvolution(out)
-        return out
-
-
-
-# FSRCNN_ResNet2:
-# FSRCNN_ResNet2 introduces a skip connection over each mapping layer in the mapping block individually
-
-class FSRCNN_ResNet2(Shrinking_BaseNet):
+class ShrinkNet_Residual2(ShrinkNet):
     def __init__(
         self,
         channels=1,
-        feature_dimension=56,
-        shrinking_filters=12,
+        feature_channels=56,
+        shrinking_channels=12,
         mapping_depth=4,
         types=["conv", "conv", "conv", "conv"],
         kernels=((5, 5), (5, 5), (3, 3), (1, 1), (9, 9))
     ):
-        super(FSRCNN_ResNet2, self).__init__(channels=channels, feature_dimension=feature_dimension, shrinking_filters=shrinking_filters, mapping_depth=mapping_depth, types=types, kernels=kernels)
+        super(ShrinkNet_Residual2, self).__init__(channels=channels, feature_channels=feature_channels, shrinking_channels=shrinking_channels, mapping_depth=mapping_depth, types=types, kernels=kernels)
         self.mapping = None 
         self.mapping1 = ConvBlock(
-                    in_channels=shrinking_filters,
-                    out_channels=shrinking_filters,
+                    in_channels=shrinking_channels,
+                    out_channels=shrinking_channels,
                     kernel_size=self.kernels[2],
                     type=self.types[2],
                 )
         self.mapping2 = ConvBlock(
-                    in_channels=shrinking_filters,
-                    out_channels=shrinking_filters,
+                    in_channels=shrinking_channels,
+                    out_channels=shrinking_channels,
                     kernel_size=self.kernels[2],
                     type=self.types[2],
                 )
         self.mapping3 = ConvBlock(
-                    in_channels=shrinking_filters,
-                    out_channels=shrinking_filters,
+                    in_channels=shrinking_channels,
+                    out_channels=shrinking_channels,
                     kernel_size=self.kernels[2],
                     type=self.types[2],
                 )
         self.mapping4 = ConvBlock(
-                    in_channels=shrinking_filters,
-                    out_channels=shrinking_filters,
+                    in_channels=shrinking_channels,
+                    out_channels=shrinking_channels,
                     kernel_size=self.kernels[2],
                     type=self.types[2],
                 )
@@ -164,7 +161,7 @@ class FSRCNN_ResNet2(Shrinking_BaseNet):
         return out
     
 # adds a skip after every mapping layer, skipping the rest of the mapping layers
-class FSRCNN_ResNet3(FSRCNN_ResNet2):
+class ShrinkNet_Residual3(ShrinkNet_Residual2):
     def forward(self, out):
         out = self.feature_extraction(out)
         out = self.shrinking(out)
