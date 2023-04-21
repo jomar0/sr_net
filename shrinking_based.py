@@ -13,7 +13,7 @@ class Shrinking_BaseNet(nn.Module):
         shrinking_filters=12,
         mapping_depth=4,
         types=["conv", "conv", "conv", "conv"],
-        kernels=((5, 5), (5, 5), (3, 3), (1, 1), (9, 9))
+        kernels=((5, 5), (5, 5), (3, 3), (1, 1), (9, 9)),
     ):
         super(Shrinking_BaseNet, self).__init__()
 

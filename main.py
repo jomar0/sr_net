@@ -2,6 +2,7 @@ from data import ImagePairs
 from train import *
 from shrinking_based import *
 import os
+from torch import nn
 import time
 from utils import BestModel, create_dataloaders
 import argparse
@@ -10,8 +11,8 @@ import argparse
 parser = argparse.ArgumentParser(description="Trainer for SRNET")
 
 # Add the arguments
-parser.add_argument("name", type=str, help="Name of the program")
-parser.add_argument("model_name", type=str, help="Name of the model")
+parser.add_argument("--name", type=str, help="Name of the program")
+parser.add_argument("--net", type=str, help="Name of the model")
 parser.add_argument("feature_dimension", type=int, help="Dimension of the feature space")
 parser.add_argument("shrinking_filters", type=int, help="Number of shrinking filters")
 parser.add_argument("mapping_depth", type=int, help="mapping depth")
@@ -45,6 +46,7 @@ elif model_name == "ResNet2":
     model = FSRCNN_ResNet2(feature_dimension=feature_dimension, shrinking_filters=shrinking_filters,mapping_depth=mapping_depth, types=types)
 else:
     raise Exception("Not a valid model")
+
 
 log_path=f"/home/u1909943/MSc/results/{name}/{name}.log"
 if not os.path.exists(f"/home/u1909943/MSc/results/{name}/"):
