@@ -13,6 +13,7 @@ import shutil
 
 
 def read_json_file(file_path):
+    file_path = os.path.join(file_path, "config.json")
     if not os.path.isfile(file_path):
         raise FileNotFoundError(f"File '{file_path}' not found")
     with open(file_path) as json_file:
@@ -36,7 +37,8 @@ def create_datasets(dataset_root_path):
 
     testing_path = os.path.join(dataset_root_path, "testing")
     if not os.path.isdir(testing_path):
-        raise NotADirectoryError(f"{testing_path} is not a directory or does not exist")
+        raise NotADirectoryError(
+            f"{testing_path} is not a directory or does not exist")
 
     evaluation_path = os.path.join(dataset_root_path, "evaluation")
     if not os.path.isdir(evaluation_path):
@@ -172,17 +174,21 @@ def create_loss(loss_dict):
 
 
 parser = argparse.ArgumentParser(description="Trainer for SRNETs")
-parser.add_argument("--args", type=str, help="Program Argment json path")
+parser.add_argument("--path", type=str, help="Program Argment json path")
 cmd_args = parser.parse_args()
 args = read_json_file(cmd_args.args)
 
 training, evaluation, testing = create_datasets(args["dataset"])
-log_path, model_path = create_log_directory(args["log_path"], args["name"])
+log_path = args["name"] + ".log"
+model_path = args["name"] + ".model"
+log_path = os.path.join(cmd_args.args, log_path)
+model_path = os.path.join(cmd_args.args, model_path)
+
 model = create_model(args)
 loss = create_loss(args["loss"])
 
 # file.write the arguments
-open(log_path, "w").close() # delete content
+open(log_path, "w").close()  # delete content
 with open(log_path, "a") as file:
     file.write("=" * 80 + "\n")
     file.write(f"Log File for Training Session\n")
@@ -208,6 +214,17 @@ results = train(
 elapsed = time.time() - start
 formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed))
 
+with open(log_path, "a") as file:
+    file.write(f"Training took: {formatted_time}" + "\n")
 
+same_epoch = results.data["best_ssim"]["epoch"] != results.data["best_psnr"]["epoch"]
+for metric in (["ssim", "psnr"] if same_epoch else ["ssim"]):
+    model.load_state_dict(results.data[f"best_{metric}"]["model"])
+    val_ssim, val_psnr, val_loss = test(
+        model=model, dataloader=DataLoader(training, batch_size=1), criterion=create_loss(args["loss"]), device="cuda")
+    results.update_test(metric if same_epoch else "both", val_psnr, val_ssim, val_loss,
+                        create_loss(args["loss"]).__class__.__name__)
 
+results.save(model_path)
 
+print("Complete")
