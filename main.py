@@ -225,6 +225,22 @@ for metric in (["ssim", "psnr"] if same_epoch else ["ssim"]):
     results.update_test(metric if same_epoch else "both", val_psnr, val_ssim, val_loss,
                         create_loss(args["loss"]).__class__.__name__)
 
-results.save(model_path)
 
+# ssim params
+model.load_state_dict(results.data["best_ssim"]["model"])
+params = sum(p.numel() for p in model.parameters())
+results.data["best_ssim"]["model_params"] = params
+with open(log_path, "a") as file:
+    file.write(f"Best SSIM - Number of Parameters: {params}\n")
+print(f"Best SSIM - Number of Parameters: {params}")
+
+# psnr params
+model.load_state_dict(results.data["best_psnr"]["model"])
+params = sum(p.numel() for p in model.parameters())
+results.data["best_psnr"]["model_params"] = params
+with open(log_path, "a") as file:
+    file.write(f"Best PSNR - Number of Parameters: {params}\n")
+print(f"Best PSNR - Number of Parameters: {params}")
+
+results.save(model_path)
 print("Complete")
