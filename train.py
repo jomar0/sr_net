@@ -12,7 +12,7 @@ import os
 def train(model, dataloaders, epochs, learning_rate, criterion, log_path=None, device='cuda'):
     save_state = Model()
     optimiser = optim.Adam(params=model.parameters(), lr=learning_rate)
-
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimiser, mode='min', factor=0.1, patience=3)
     training_dataloader, evaluation_dataloader = dataloaders
 
     device = torch.device(device)
@@ -39,6 +39,7 @@ def train(model, dataloaders, epochs, learning_rate, criterion, log_path=None, d
             loss_so_far = epoch_loss / progress_bar.n
             progress_bar.set_postfix_str(f'Loss: {loss_so_far:.6f}')
         epoch_loss /= len(training_dataloader.dataset)  # calc loss || |_
+        scheduler.step(epoch_loss)
         progress_bar.set_description_str(
             f"Epoch {epoch+1}/{epochs} - Evaluating")
         progress_bar.total = len(evaluation_dataloader.dataset)
