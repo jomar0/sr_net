@@ -1,12 +1,26 @@
 import torch
 import torch.nn as nn
+from torchvision import transforms
 import copy
+from PIL import Image
 import os
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 import numpy as np
 import torch
 from skimage.metrics import structural_similarity
+
+def generate_sample(id, dataset, model):
+    to_PIL = transforms.ToPILImage()
+    lr, hr = dataset.get_item(id)
+    input = dataset.transform(lr)
+    interpolated = lr.resize((1280, 720), Image.Resampling.BICUBIC)
+    _, cb, cr = interpolated.convert("YCbCr").split()
+    sr_y = model(input).clamp(0.0,1.0)
+    return Image.merge("YCbCr", (to_PIL(sr_y), cb, cr)), hr
+    
+
+
 
 def initialise(module):
     nn.init.kaiming_normal_(module.weight, mode="fan_out")
@@ -104,17 +118,6 @@ class SSIMLoss(nn.Module):
 class Model:
     def __init__(self):
         self.data = dict()
-        self.data["best_ssim"] = dict()
-        self.data["best_psnr"] = dict()
-        self.data["best_ssim"]["eval"] = dict()
-        self.data["best_psnr"]["eval"] = dict()
-
-        self.data["best_ssim"]["test"] = dict()
-        self.data["best_ssim"]["test"]["loss"] = dict()
-        self.data["best_psnr"]["test"] = dict()
-        self.data["best_psnr"]["test"]["loss"] = dict()
-
-
     def update_eval(self, epoch, model, ssim, psnr):
         self.data["current_model"] = copy.deepcopy(model.state_dict())
         self.data["model_args"] = copy.deepcopy(model.args)
@@ -125,7 +128,7 @@ class Model:
                     self.data[f"best_{metric}"]["eval"]["ssim"] = ssim
                     self.data[f"best_{metric}"]["eval"]["psnr"] = psnr
                     self.data[f"best_{metric}"]["model"] = copy.deepcopy(model.state_dict())
-            except KeyError:
+            except ValueError:
                 self.data[f"best_{metric}"]["epoch"] = epoch
                 self.data[f"best_{metric}"]["eval"]["ssim"] = ssim
                 self.data[f"best_{metric}"]["eval"]["psnr"] = psnr
