@@ -59,7 +59,7 @@ def train(model, dataloaders, epochs, learning_rate, criterion, log_path=None, d
                 progress_bar.update(len(input))
             eval_psnr /= len(evaluation_dataloader.dataset)
             eval_ssim /= len(evaluation_dataloader.dataset)
-            save_state.update(epoch=epoch+1, model=model,
+            save_state.update_eval(epoch=epoch+1, model=model,
                               psnr=eval_psnr, ssim=eval_ssim)
         progress_bar.close()
         status = f"Epoch {epoch+1}/{epochs}, Loss: {epoch_loss:.6f}, PSNR: {eval_psnr:.6f} dB, SSIM: {eval_ssim:.6f}"
@@ -103,3 +103,4 @@ def test(model, dataloader, criterion=None, log_path=None, device='cuda'):
             if os.path.exists(log_path):
                 with open(log_path, "a") as file:
                     file.write(status + "\n")
+    return eval_ssim, eval_psnr, eval_loss

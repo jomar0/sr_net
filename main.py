@@ -232,9 +232,8 @@ same_epoch = results.data["best_ssim"]["epoch"] != results.data["best_psnr"]["ep
 for metric in (["ssim", "psnr"] if same_epoch else ["ssim"]):
     model.load_state_dict(results.data[f"best_{metric}"]["model"])
     val_ssim, val_psnr, val_loss = test(
-        model=model, dataloader=DataLoader(training, batch_size=1), criterion=create_loss(args["loss"]), device="cuda")
-    results.update_test(metric if same_epoch else "both", val_psnr, val_ssim, val_loss,
-                        create_loss(args["loss"]).__class__.__name__)
+        model=model, dataloader=DataLoader(testing, batch_size=1), criterion=create_loss(args), device="cuda")
+    results.update_test(metric if same_epoch else "both", val_psnr, val_ssim, val_loss, loss=loss.__class__.__name__)
 
 
 # ssim params

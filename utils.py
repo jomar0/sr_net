@@ -104,6 +104,17 @@ class SSIMLoss(nn.Module):
 class Model:
     def __init__(self):
         self.data = dict()
+        self.data["best_ssim"] = dict()
+        self.data["best_psnr"] = dict()
+        self.data["best_ssim"]["eval"] = dict()
+        self.data["best_psnr"]["eval"] = dict()
+
+        self.data["best_ssim"]["test"] = dict()
+        self.data["best_ssim"]["test"]["loss"] = dict()
+        self.data["best_psnr"]["test"] = dict()
+        self.data["best_psnr"]["test"]["loss"] = dict()
+
+
     def update_eval(self, epoch, model, ssim, psnr):
         self.data["current_model"] = copy.deepcopy(model.state_dict())
         self.data["model_args"] = copy.deepcopy(model.args)
@@ -114,7 +125,7 @@ class Model:
                     self.data[f"best_{metric}"]["eval"]["ssim"] = ssim
                     self.data[f"best_{metric}"]["eval"]["psnr"] = psnr
                     self.data[f"best_{metric}"]["model"] = copy.deepcopy(model.state_dict())
-            except ValueError:
+            except KeyError:
                 self.data[f"best_{metric}"]["epoch"] = epoch
                 self.data[f"best_{metric}"]["eval"]["ssim"] = ssim
                 self.data[f"best_{metric}"]["eval"]["psnr"] = psnr
