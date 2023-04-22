@@ -2,6 +2,7 @@ from torch import nn
 import brevitas.nn as qnn
 from prefabs import ConvBlock
 import inspect
+from utils import initialise
 
 
 class ResBlockNet(nn.Module):
@@ -51,11 +52,8 @@ class ResBlockNet(nn.Module):
             stride=2,
             output_padding=1,
         )
-        __initialise(self.output_layer)
+        initialise(self.output_layer)
 
-        def __initialise(self, module):
-            nn.init.xavier_normal_(module.weight)
-            return module
     def forward(self, out):
         out = self.input_layer(out)
         for map_block in self.map_blocks:

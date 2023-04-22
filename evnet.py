@@ -1,6 +1,7 @@
 from torch import nn
 import brevitas.nn as qnn
 from prefabs import ConvBlock
+from utils import initialise
 import inspect
 
 
@@ -33,11 +34,8 @@ class EVNet(nn.Module):
             stride=2,
             output_padding=1,
         )
-        __initialise(self.output_layer)
-
-        def __initialise(self, module):
-            nn.init.xavier_normal_(module.weight)
-            return module
+        initialise(self.output_layer)
+        
         def forward(self, out):
             out = self.input_layer(out)
             for hidden_layer in self.hidden_layers:
