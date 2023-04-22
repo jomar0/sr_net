@@ -8,9 +8,9 @@ import numpy as np
 import torch
 from skimage.metrics import structural_similarity
 
-def initialise(self, module):
+def initialise(module):
     nn.init.kaiming_normal_(module.weight, mode="fan_out")
-    nn.init.constant_(module.bias)
+    nn.init.constant_(module.bias, 0.01)
     return module
 
 def create_dataloaders(training_dataset, evaluation_dataset, batch_size=16, num_workers=5):

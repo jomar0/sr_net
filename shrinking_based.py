@@ -63,7 +63,7 @@ class ShrinkNet(nn.Module):
         )
 
         # Deconv
-        self.deconvolution = initialise(qnn.QuantConvTranspose2d(
+        self.deconvolution = initialise(module=qnn.QuantConvTranspose2d(
             in_channels=self.feature_channels,
             out_channels=self.channels,
             kernel_size=self.kernels[4],
@@ -92,7 +92,8 @@ class ShrinkNet(nn.Module):
     def forward(self, out):
         out = self.feature_extraction(out)
         out = self.shrinking(out)
-        out = self.mapping(out)
+        for layer in self.mapping:
+            out = layer(out)
         out = self.expanding(out)
         out = self.deconvolution(out)
         return out
@@ -105,7 +106,10 @@ class ShrinkNet_Residual1(ShrinkNet):
     def forward(self, out):
         out = self.feature_extraction(out)
         out = self.shrinking(out)
-        out = out + self.mapping(out)
+        temp = out
+        for layer in self.mapping:
+            out = layer(out)
+        out = out + temp
         out = self.expanding(out)
         out = self.deconvolution(out)
         return out

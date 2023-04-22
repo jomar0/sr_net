@@ -6,7 +6,7 @@ from nonshrinking_based import *
 import os
 from torch import nn
 import time
-from utils import BestModel, create_dataloaders, SSIMLoss
+from utils import Model, create_dataloaders, SSIMLoss
 import argparse
 import json
 import shutil
@@ -111,7 +111,7 @@ def create_model(args):
                 feature_channels=model_config["feature_channels"],
                 shrinking_channels=model_config["shrinking_channels"],
                 mapping_depth=model_config["mapping_depth"],
-                types=[tuple(x) for x in model_config["types"]],
+                types = model_config["types"],
                 kernels=[tuple(x) for x in model_config["kernels"]],
             )
         elif subclass == "ShrinkNet_Residual2":
@@ -119,7 +119,7 @@ def create_model(args):
                 feature_channels=model_config["feature_channels"],
                 shrinking_channels=model_config["shrinking_channels"],
                 mapping_depth=model_config["mapping_depth"],
-                types=[tuple(x) for x in model_config["types"]],
+                types = model_config["types"],
                 kernels=[tuple(x) for x in model_config["kernels"]],
             )
         elif subclass == "ShrinkNet_Residual3":
@@ -127,7 +127,15 @@ def create_model(args):
                 feature_channels=model_config["feature_channels"],
                 shrinking_channels=model_config["shrinking_channels"],
                 mapping_depth=model_config["mapping_depth"],
-                types=[tuple(x) for x in model_config["types"]],
+                types = model_config["types"],
+                kernels=[tuple(x) for x in model_config["kernels"]],
+            )
+        elif subclass == "ShrinkNet_Residual4":
+            return ShrinkNet_Residual4(
+                feature_channels=model_config["feature_channels"],
+                shrinking_channels=model_config["shrinking_channels"],
+                mapping_depth=model_config["mapping_depth"],
+                types = model_config["types"],
                 kernels=[tuple(x) for x in model_config["kernels"]],
             )
         else:
@@ -135,7 +143,7 @@ def create_model(args):
                 feature_channels=model_config["feature_channels"],
                 shrinking_channels=model_config["shrinking_channels"],
                 mapping_depth=model_config["mapping_depth"],
-                types=[tuple(x) for x in model_config["types"]],
+                types = model_config["types"],
                 kernels=[tuple(x) for x in model_config["kernels"]],
             )
     elif superclass == "EVNet":
@@ -144,8 +152,8 @@ def create_model(args):
         return ResBlockNet(config=model_config)
 
 
-def create_loss(loss_dict):
-    loss_name = loss_dict["name"]
+def create_loss(args):
+    loss_name = args["loss"]["name"]
     if loss_name in ["l1", "mae"]:
         loss_func = nn.L1Loss
     elif loss_name in ["l2", "mse"]:
@@ -161,31 +169,33 @@ def create_loss(loss_dict):
     else:
         raise ValueError(f"Invalid loss name: {loss_name}")
 
-    if "args" in loss_dict:
-        args = loss_dict["args"]
+    if "args" in args["loss"]:
+        args = args["loss"]["args"]
         try:
             loss_func = loss_func(**args)
         except TypeError as e:
             raise ValueError(
                 f"Invalid arguments for loss function {loss_name}: {args}"
             ) from e
+    else:
+        loss_func = loss_func()
 
     return loss_func
 
 
 parser = argparse.ArgumentParser(description="Trainer for SRNETs")
-parser.add_argument("--path", type=str, help="Program Argment json path")
+parser.add_argument("path", type=str, help="Program Argment json path")
 cmd_args = parser.parse_args()
-args = read_json_file(cmd_args.args)
+args = read_json_file(cmd_args.path)
 
 training, evaluation, testing = create_datasets(args["dataset"])
 log_path = args["name"] + ".log"
 model_path = args["name"] + ".model"
-log_path = os.path.join(cmd_args.args, log_path)
-model_path = os.path.join(cmd_args.args, model_path)
+log_path = os.path.join(cmd_args.path, log_path)
+model_path = os.path.join(cmd_args.path, model_path)
 
 model = create_model(args)
-loss = create_loss(args["loss"])
+loss = create_loss(args)
 
 # file.write the arguments
 open(log_path, "w").close()  # delete content
@@ -209,6 +219,7 @@ results = train(
     epochs=args["epochs"],
     learning_rate=args["learning_rate"],
     log_path=log_path,
+    criterion=loss
 )
 
 elapsed = time.time() - start
