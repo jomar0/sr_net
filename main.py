@@ -11,6 +11,23 @@ import argparse
 import json
 import shutil
 
+def create_sample_folder(sample_path):
+    if os.path.exists(sample_path):
+    # If directory already exists, delete all files in it
+        for filename in os.listdir(sample_path):
+            file_path = os.path.join(sample_path, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                print(f"Failed to delete {file_path}. Reason: {e}")
+                return None
+    else:
+    # If directory does not exist, create it
+        os.makedirs(sample_path)
+    return sample_path
 
 def read_json_file(file_path):
     file_path = os.path.join(file_path, "config.json")
@@ -228,12 +245,19 @@ formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed))
 with open(log_path, "a") as file:
     file.write(f"Training took: {formatted_time}" + "\n")
 
+
+sample_path = create_sample_folder(os.path.join(cmd_args.path, "samples"))
 same_epoch = results.data["best_ssim"]["epoch"] != results.data["best_psnr"]["epoch"]
 for metric in (["ssim", "psnr"] if same_epoch else ["ssim"]):
     model.load_state_dict(results.data[f"best_{metric}"]["model"])
     val_ssim, val_psnr, val_loss = test(
         model=model, dataloader=DataLoader(testing, batch_size=1), criterion=create_loss(args), device="cuda")
     results.update_test(metric if same_epoch else "both", val_psnr, val_ssim, val_loss, loss=loss.__class__.__name__)
+
+    
+    #generate the samples
+    
+
 
 
 # ssim params
@@ -251,6 +275,7 @@ results.data["best_psnr"]["model_params"] = params
 with open(log_path, "a") as file:
     file.write(f"Best PSNR - Number of Parameters: {params}\n")
 print(f"Best PSNR - Number of Parameters: {params}")
+
 
 results.save(model_path)
 print("Complete")

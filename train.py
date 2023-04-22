@@ -30,7 +30,7 @@ def train(model, dataloaders, epochs, learning_rate, criterion, log_path=None, d
 
             optimiser.zero_grad()
 
-            outputs = model(inputs)
+            outputs = model(inputs).clamp(0.0, 0.1)
             loss = criterion(outputs, ground_truths)
             loss.backward()
             optimiser.step()
@@ -52,7 +52,7 @@ def train(model, dataloaders, epochs, learning_rate, criterion, log_path=None, d
                 input = input.to(device)  # pop them on the GPU, again
                 ground_truth = ground_truth.to(device)
 
-                output = model(input)
+                output = model(input).clamp(0.0, 1.0)
 
                 eval_psnr += psnr(output, ground_truth)
                 eval_ssim += ssim(output, ground_truth)

@@ -1,12 +1,26 @@
 import torch
 import torch.nn as nn
+from torchvision import transforms
 import copy
+from PIL import Image
 import os
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 import numpy as np
 import torch
 from skimage.metrics import structural_similarity
+
+def generate_sample(id, dataset, model):
+    to_PIL = transforms.ToPILImage()
+    lr, hr = dataset.get_item(id)
+    input = dataset.transform(lr)
+    interpolated = lr.resize((1280, 720), Image.Resampling.BICUBIC)
+    _, cb, cr = interpolated.convert("YCbCr").split()
+    sr_y = model(input).clamp(0.0,1.0)
+    return Image.merge("YCbCr", (to_PIL(sr_y), cb, cr)), hr
+    
+
+
 
 def initialise(module):
     nn.init.kaiming_normal_(module.weight, mode="fan_out")
