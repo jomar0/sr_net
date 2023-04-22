@@ -56,5 +56,14 @@ class ResBlockNet(nn.Module):
         def __initialise(self, module):
             nn.init.xavier_normal_(module.weight)
             return module
-    #def forward(self, out):
+    def forward(self, out):
+        out = self.input_layer(out)
+        for map_block in self.map_blocks:
+            residual = out
+            out = map_block(out)
+            out = out + residual
+        out = self.hidden_layers(out)
+        out = self.output_layer(out)
+        return out
+
     
