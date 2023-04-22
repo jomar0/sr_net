@@ -14,8 +14,6 @@ class ImagePairs(Dataset):
             transforms.ToTensor()
         ])
 
-    def transform(self, input):
-        return self.transforms(input)
     def __getitem__(self, index):
         name_base = str(index).zfill(5)
         name_lr = name_base + '_LR.png'
@@ -29,14 +27,6 @@ class ImagePairs(Dataset):
         hr_image = self.transforms(hr_image)
 
         return (lr_image, hr_image)
-    
-    def get_item(self, index):
-        name_base = str(index).zfill(5)
-        name_lr = name_base + "_LR.png"
-        name_hr = name_base + "_HR.png"
-        lr_image = Image.open(self.directory / 'LR' / name_lr)
-        hr_image = Image.open(self.directory / 'HR' / name_hr)
-        return lr_image, hr_image
     
     def __len__(self):
         return self.count

@@ -30,7 +30,7 @@ def train(model, dataloaders, epochs, learning_rate, criterion, log_path=None, d
 
             optimiser.zero_grad()
 
-            outputs = model(inputs).clamp(0.0, 0.1)
+            outputs = model(inputs)
             loss = criterion(outputs, ground_truths)
             loss.backward()
             optimiser.step()
@@ -52,14 +52,14 @@ def train(model, dataloaders, epochs, learning_rate, criterion, log_path=None, d
                 input = input.to(device)  # pop them on the GPU, again
                 ground_truth = ground_truth.to(device)
 
-                output = model(input).clamp(0.0, 1.0)
+                output = model(input)
 
                 eval_psnr += psnr(output, ground_truth)
                 eval_ssim += ssim(output, ground_truth)
                 progress_bar.update(len(input))
             eval_psnr /= len(evaluation_dataloader.dataset)
             eval_ssim /= len(evaluation_dataloader.dataset)
-            save_state.update(epoch=epoch+1, model=model,
+            save_state.update_eval(epoch=epoch+1, model=model,
                               psnr=eval_psnr, ssim=eval_ssim)
         progress_bar.close()
         status = f"Epoch {epoch+1}/{epochs}, Loss: {epoch_loss:.6f}, PSNR: {eval_psnr:.6f} dB, SSIM: {eval_ssim:.6f}"
@@ -103,3 +103,4 @@ def test(model, dataloader, criterion=None, log_path=None, device='cuda'):
             if os.path.exists(log_path):
                 with open(log_path, "a") as file:
                     file.write(status + "\n")
+    return eval_ssim, eval_psnr, eval_loss
