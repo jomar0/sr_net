@@ -1,5 +1,6 @@
 from torch import nn
 import brevitas.nn as qnn
+import torch
 from convblock import ConvBlock
 import inspect
 from util import initialise
@@ -72,7 +73,7 @@ class ShrinkNet(nn.Module):
             output_padding=1,
         ))
 
-
+        self.activation = qnn.QuantReLU()
 
         # Generate mapping layer
 
@@ -88,14 +89,16 @@ class ShrinkNet(nn.Module):
                 )
             )
         return to_return
+    
+
 
     def forward(self, out):
-        out = qnn.QuantReLU(self.feature_extraction(out))
-        out = qnn.QuantReLU(self.shrinking(out))
+        out = self.feature_extraction(out)
+        out = self.shrinking(self.activation(out))
         for layer in self.mapping:
-            out = qnn.QuantReLU(layer(out))
-        out = qnn.QuantReLU(self.expanding(out))
-        out = self.deconvolution(out)
+            out = layer(self.activation(out))
+        out = self.expanding(self.activation(out))
+        out = self.deconvolution(self.activation(out))
         return out
 
 
@@ -104,56 +107,56 @@ class ShrinkNet(nn.Module):
 class ShrinkNet_Residual1(ShrinkNet):
     # FSRCNN_ResNet with variable Residual Mapping Layers.
     def forward(self, out):
-        out = qnn.QuantReLU(self.feature_extraction(out))
-        out = self.shrinking(out)
+        out = self.feature_extraction(out)
+        out = self.shrinking(self.activation(out))
         temp = out
-        for i, layer in enumerate(self.mapping):
-            out = layer(qnn.QuantReLU(out))
-        out = qnn.QuantReLU(out + temp)
-        out = qnn.QuantReLU(self.expanding(out))
-        out = self.deconvolution(out)
+        for layer in self.mapping:
+            out = layer(self.activation(out))
+        out = out + temp
+        out = self.expanding(self.activation(out))
+        out = self.deconvolution(self.activation(out))
         return out
 
 
 # adds a skip over every mapping layer
 class ShrinkNet_Residual2(ShrinkNet):
     def forward(self, out):
-        out = qnn.QuantReLU(self.feature_extraction(out))
-        out = self.shrinking(out)
+        out = self.feature_extraction(out)
+        out = self.shrinking(self.activation(out))
         for mapping_layer in self.mapping:
             residual = out
-            out = mapping_layer(qnn.QuantReLU(out))
+            out = mapping_layer(self.activation(out))
             out = out + residual
-        out = qnn.QuantReLU(self.expanding(qnn.QuantReLU(out)))
-        out = self.deconvolution(out)
+        out = self.expanding(self.activation(out))
+        out = self.deconvolution(self.activation(out))
         return out
 
 
 # adds residual every other mapping layer
 class ShrinkNet_Residual3(ShrinkNet):
     def forward(self, out):
-        out = qnn.QuantReLU(self.feature_extraction(out))
-        out = self.shrinking(out)
+        out = self.feature_extraction(self.activation(out))
+        out = self.shrinking(self.activation(out))
         for i, mapping_layer in enumerate(self.mapping):
             residual = out
-            out = mapping_layer(qnn.QuantReLU(out))
+            out = mapping_layer(self.activation(out))
             if i % 2 == 0:
                 out = out + residual
-        out = qnn.QuantReLU(self.expanding(qnn.QuantReLU(out)))
-        out = self.deconvolution(out)
+        out = self.expanding(self.activation(out))
+        out = self.deconvolution(self.activation(out))
         return out
 
 
 # skip to the end of mapping after every map layer
 class ShrinkNet_Residual4(ShrinkNet):
     def forward(self, out):
-        out = qnn.QuantReLU(self.feature_extraction(out))
-        out = self.shrinking(out)
-        skip = out
-        out = self.mapping[0](qnn.QuantReLU(out))
-        out = self.mapping[1](qnn.QuantReLU(out)) + skip
-        out = self.mapping[2](qnn.QuantReLU(out)) + skip
-        out = self.mapping[3](qnn.QuantReLU(out)) + skip
-        out = qnn.QuantReLU(self.expanding(qnn.QuantReLU(out)))
-        out = self.deconvolution(out)
+        out = self.feature_extraction(out)
+        out = self.shrinking(self.activation(out))
+        intermediates = list([out])
+        for mapping_layer in self.mapping:
+            out = mapping_layer(self.activation(out))
+            intermediates.append(out)
+        out = sum(intermediates)
+        out = self.expanding(self.activation(out))
+        out = self.deconvolution(self.activation(out))
         return out

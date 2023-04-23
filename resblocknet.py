@@ -24,28 +24,42 @@ class ResBlockNet(nn.Module):
             self.map_blocks.append(
                 nn.Sequential(
                     ConvBlock(
-                        in_channels=config["mapping_blocks"][f"{i}"]["0"]["in_channels"],
-                        out_channels=config["mapping_blocks"][f"{i}"]["0"]["out_channels"],
-                        kernel_size=tuple(config["mapping_blocks"][f"{i}"]["0"]["kernel"]),
+                        in_channels=config["mapping_blocks"][f"{i}"]["0"][
+                            "in_channels"
+                        ],
+                        out_channels=config["mapping_blocks"][f"{i}"]["0"][
+                            "out_channels"
+                        ],
+                        kernel_size=tuple(
+                            config["mapping_blocks"][f"{i}"]["0"]["kernel"]
+                        ),
                         type="dws",
                     ),
                     qnn.QuantReLU(),
                     ConvBlock(
-                        in_channels=config["mapping_blocks"][f"{i}"]["1"]["in_channels"],
-                        out_channels=config["mapping_blocks"][f"{i}"]["1"]["out_channels"],
-                        kernel_size=tuple(config["mapping_blocks"][f"{i}"]["0"]["kernel"]),
+                        in_channels=config["mapping_blocks"][f"{i}"]["1"][
+                            "in_channels"
+                        ],
+                        out_channels=config["mapping_blocks"][f"{i}"]["1"][
+                            "out_channels"
+                        ],
+                        kernel_size=tuple(
+                            config["mapping_blocks"][f"{i}"]["0"]["kernel"]
+                        ),
                         type="dws",
                     ),
                 )
             )
         self.hidden_layers = nn.ModuleList()
         for i in range(len(config["hidden_layers"])):
-            self.hidden_layers.append(ConvBlock(
-                in_channels=config["hidden_layers"][f"{i}"]["in_channels"],
-                out_channels = config["hidden_layers"][f"{i}"]["out_channels"],
-                kernel_size=tuple(config["hidden_layers"][f"{i}"]["kernel"]),
-                type="dws"
-            ))
+            self.hidden_layers.append(
+                ConvBlock(
+                    in_channels=config["hidden_layers"][f"{i}"]["in_channels"],
+                    out_channels=config["hidden_layers"][f"{i}"]["out_channels"],
+                    kernel_size=tuple(config["hidden_layers"][f"{i}"]["kernel"]),
+                    type="dws",
+                )
+            )
         self.output_layer = qnn.QuantConvTranspose2d(
             in_channels=config["output_layer"]["in_channels"],
             out_channels=config["output_layer"]["out_channels"],
@@ -57,17 +71,18 @@ class ResBlockNet(nn.Module):
         initialise(self.output_layer)
 
     def forward(self, out):
-        out = qnn.QuantReLU(self.input_layer(out))
+        out = self.input_layer(out)
         for map_block in self.map_blocks:
             residual = out
-            out = map_block(out)
-            out = qnn.QuantReLU(out + residual)
+            out = map_block(self.activation(out))
+            out = out + residual
         for hidden_layer in self.hidden_layers:
-            out = qnn.QuantReLU(hidden_layer(out))
-        out = self.output_layer(out)
+            out = hidden_layer(self.activation(out))
+        out = self.output_layer(self.activation(out))
         return out
 
-#expand after hidden layers
+
+# expand after hidden layers
 class ShrinkResBlockNet1(ResBlockNet):
     def __init__(self, config: dict, **kwargs):
         self.config = config
@@ -80,44 +95,40 @@ class ShrinkResBlockNet1(ResBlockNet):
             in_channels=config["shrinking_layer"]["in_channels"],
             out_channels=config["shrinking_layer"]["out_channels"],
             kernel_size=tuple(config["shrinking_layer"]["kernel"]),
-            type="dws"
+            type="dws",
         )
         self.expanding = ConvBlock(
             in_channels=config["expanding_layer"]["in_channels"],
             out_channels=config["expanding_layer"]["out_channels"],
             kernel_size=tuple(config["expanding_layer"]["kernel"]),
-            type="dws"
+            type="dws",
         )
+
     def forward(self, out):
-        out = qnn.QuantReLU(self.input_layer(out))
-        out = self.shrinking(out)
-                            
+        out = self.input_layer(out)
+        out = self.shrinking(self.activation(out))
         for map_block in self.map_blocks:
             residual = out
-            out = map_block(qnn.QuantReLU(out))
+            out = map_block(self.activation(out))
             out = out + residual
         for hidden_layer in self.hidden_layers:
-            out = hidden_layer(qnn.QuantReLU(out))
-        out = qnn.QuantReLU(self.expanding(qnn.QuantReLU(out)))
-        out = self.output_layer(out)
+            out = hidden_layer(self.activation(out))
+        out = self.expanding(self.activation(out))
+        out = self.output_layer(self.activation(out))
         return out
-    
+
+
 # expand before hidden layers
 class ShrinkResBlockNet2(ShrinkResBlockNet1):
     def forward(self, out):
-
-        out = qnn.QuantReLU(self.input_layer(out))
-        out = self.shrinking(out)          
+        out = self.input_layer(out)
+        out = self.shrinking(self.activation(out))
         for map_block in self.map_blocks:
             residual = out
-            out = map_block(qnn.QuantReLU(out))
+            out = map_block(self.activation(out))
             out = out + residual
-        out = self.expanding(qnn.QuantReLU(out))
+        out = self.expanding(self.activation(out))
         for hidden_layer in self.hidden_layers:
-            out = hidden_layer(qnn.QuantReLU(out))
-        
-        out = self.output_layer(qnn.QuantReLU(out))
+            out = hidden_layer(self.activation(out))
+        out = self.output_layer(self.activation(out))
         return out
-
-
-    
