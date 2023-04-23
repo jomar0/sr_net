@@ -31,10 +31,10 @@ class Model:
                 self.data[f"best_{metric}"]["model"] = copy.deepcopy(model.state_dict())
     def update_test(self, value_type, psnr, ssim, loss, loss_type):
         for metric in (["ssim", "psnr"] if value_type == "both" else [value_type]):
-            self.data[f"best_{metric}"]["test"]["ssim"] == ssim
-            self.data[f"best_{metric}"]["test"]["psnr"] == psnr
-            self.data[f"best_{metric}"]["test"]["loss"]["value"] == loss
-            self.data[f"best_{metric}"]["test"]["loss"]["type"] == loss_type
+            self.data[f"best_{metric}"]["test"]["ssim"] = ssim
+            self.data[f"best_{metric}"]["test"]["psnr"] = psnr
+            self.data[f"best_{metric}"]["test"]["loss"]["value"] = loss
+            self.data[f"best_{metric}"]["test"]["loss"]["type"] = loss_type
     def save(self, path):
         save(self.data, path)
     def load(self, path):

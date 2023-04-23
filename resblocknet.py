@@ -1,8 +1,8 @@
 from torch import nn
 import brevitas.nn as qnn
-from prefabs import ConvBlock
+from convblock import ConvBlock
 import inspect
-from utils import initialise
+from util import initialise
 
 
 class ResBlockNet(nn.Module):

@@ -1,7 +1,8 @@
 import torch
 import torch.optim as optim
 from tqdm import tqdm
-from util import psnr, Model, ssim, SSIMLoss
+from util import psnr, ssim, SSIMLoss
+from model import Model
 import os
 from init_util import *
 
@@ -20,7 +21,7 @@ def train(model, dataloaders, epochs, learning_rate, criterion, log_path=None, d
         epoch_loss = 0.0
         model.train()
         progress_bar = tqdm(desc=f'Epoch {epoch+1}/{epochs} - Training  ', total=len(
-            training_dataloader.dataset), postfix=f'Loss: 0.000')
+            training_dataloader.dataset), dynamic_ncols=True)
         for data in training_dataloader:
             inputs, ground_truths = data
             inputs = inputs.to(device)  # pop them on the GPU
@@ -28,7 +29,7 @@ def train(model, dataloaders, epochs, learning_rate, criterion, log_path=None, d
 
             optimiser.zero_grad()
 
-            outputs = model(inputs).clamp(0.0, 0.1)
+            outputs = model(inputs)
             loss = criterion(outputs, ground_truths)
             loss.backward()
             optimiser.step()
@@ -38,11 +39,11 @@ def train(model, dataloaders, epochs, learning_rate, criterion, log_path=None, d
             progress_bar.set_postfix_str(f'Loss: {loss_so_far:.6f}')
         epoch_loss /= len(training_dataloader.dataset)  # calc loss || |_
         scheduler.step(epoch_loss)
-        progress_bar.set_description_str(
-            f"Epoch {epoch+1}/{epochs} - Evaluating")
-        progress_bar.total = len(evaluation_dataloader.dataset)
-        progress_bar.n = 0
+        progress_bar.close()
+
         model.eval()
+        progress_bar = tqdm(desc=f'Epoch {epoch+1}/{epochs} - Evaluating ', total=len(
+            evaluation_dataloader.dataset), dynamic_ncols=True)
         eval_psnr = 0.0
         eval_ssim = 0.0
         with torch.no_grad():
@@ -55,12 +56,18 @@ def train(model, dataloaders, epochs, learning_rate, criterion, log_path=None, d
                 eval_psnr += psnr(output, ground_truth)
                 eval_ssim += ssim(output, ground_truth)
                 progress_bar.update(len(input))
+
+                psnr_so_far = eval_psnr / progress_bar.n
+                ssim_so_far = eval_ssim / progress_bar.n
+
+                progress_bar.set_postfix_str(
+                    f'SSIM: {ssim_so_far:.6f} PSNR: {psnr_so_far:.6f} dB')
+
             eval_psnr /= len(evaluation_dataloader.dataset)
             eval_ssim /= len(evaluation_dataloader.dataset)
-            save_state.update_eval(epoch=epoch+1, model=model,
-                                   psnr=eval_psnr, ssim=eval_ssim)
+            save_state.update_eval(epoch=epoch+1, model=model, psnr=eval_psnr, ssim=eval_ssim)
         progress_bar.close()
-        status = f"Epoch {epoch+1}/{epochs}, Loss: {epoch_loss:.6f}, PSNR: {eval_psnr:.6f} dB, SSIM: {eval_ssim:.6f}"
+        status = f"Epoch {epoch+1}/{epochs}, Loss: {epoch_loss:.6f}, PSNR: {eval_psnr:.6f} dB, SSIM: {eval_ssim:.6f}\n"
         print(status)
         if log_path is not None:
             if os.path.exists(log_path):
@@ -77,7 +84,8 @@ def test(model, dataloader, criterion=None, log_path=None, device='cuda'):
     eval_psnr = 0.0
     eval_ssim = 0.0
     eval_loss = 0.0
-    progress_bar = tqdm(desc="Testing", total=len(dataloader.dataset))
+    progress_bar = tqdm(desc="Testing", total=len(
+        dataloader.dataset), dynamic_ncols=True)
     with torch.no_grad():
         for inputs, ground_truths in dataloader:
             inputs = inputs.to(device)

@@ -1,15 +1,12 @@
-from data import ImagePairs
 from train import *
 from shrinknet import *
 from evnet import *
 from resblocknet import *
 import os
-from torch import nn
 import time
 from util import *
 import argparse
 import json
-import shutil
 
 parser = argparse.ArgumentParser(description="Trainer for SRNETs")
 parser.add_argument("path", type=str, help="Program Argment json path")
@@ -63,7 +60,7 @@ for metric in (["ssim", "psnr"] if same_epoch else ["ssim"]):
     model.load_state_dict(results.data[f"best_{metric}"]["model"])
     val_ssim, val_psnr, val_loss = test(
         model=model, dataloader=DataLoader(testing, batch_size=1), criterion=create_loss(args), device="cuda")
-    results.update_test(metric if same_epoch else "both", val_psnr, val_ssim, val_loss, loss=loss.__class__.__name__)
+    results.update_test(metric if same_epoch else "both", val_psnr, val_ssim, val_loss, loss_type=loss.__class__.__name__)
 
     
     #generate the samples
@@ -76,6 +73,8 @@ for metric in (["ssim", "psnr"] if same_epoch else ["ssim"]):
     for i in sample_ids:
         sr, hr = generate_sample(i, testing, model)
         name_base = str(i).zfill(3)
+        sr = sr.convert("RGB")
+        hr = hr.convert("RGB")
         sr.save(os.path.join(sample_path, name_base + "_SR.png" ))
         hr.save(os.path.join(sample_path, name_base + "_HR.png" ))
 

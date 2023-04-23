@@ -1,7 +1,7 @@
 from torch import nn
 import brevitas.nn as qnn
-from prefabs import ConvBlock
-from utils import initialise
+from convblock import ConvBlock
+from util import initialise
 import inspect
 
 

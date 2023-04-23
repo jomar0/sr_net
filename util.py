@@ -6,13 +6,16 @@ import torch.nn.functional as F
 import numpy as np
 from skimage.metrics import structural_similarity
 
-def generate_sample(id, dataset, model):
+def generate_sample(id, dataset, model, device="cuda"):
     to_PIL = transforms.ToPILImage()
     lr, hr = dataset.get_item(id)
     input = dataset.transform(lr)
     interpolated = lr.resize((1280, 720), Image.Resampling.BICUBIC)
     _, cb, cr = interpolated.convert("YCbCr").split()
+
+    input = input.to(device)
     sr_y = model(input).clamp(0.0,1.0)
+    sr_y = sr_y.cpu().detach()
     return Image.merge("YCbCr", (to_PIL(sr_y), cb, cr)), hr
     
 

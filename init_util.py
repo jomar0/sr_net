@@ -184,9 +184,7 @@ def create_loss(args):
         loss_func = nn.SmoothL1Loss
     elif loss_name in ["smoothl1", "char"]:
         loss_func = nn.SmoothL1Loss
-    elif loss_name == "SSIM":
-        # You'll need to define your own custom SSIMLoss class
-        # and import it here.
+    elif loss_name == "ssim":
         loss_func = SSIMLoss
     else:
         raise ValueError(f"Invalid loss name: {loss_name}")
