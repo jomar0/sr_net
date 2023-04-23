@@ -18,7 +18,7 @@ log_path = args["name"] + ".log"
 model_path = args["name"] + ".model"
 log_path = os.path.join(cmd_args.path, log_path)
 model_path = os.path.join(cmd_args.path, model_path)
-
+name = args["name"]
 model = create_model(args)
 loss = create_loss(args)
 
@@ -26,12 +26,11 @@ loss = create_loss(args)
 open(log_path, "w").close()  # delete content
 with open(log_path, "a") as file:
     file.write("=" * 80 + "\n")
-    file.write(f"Log File for Training Session\n")
-
+    file.write(f"Log File for Training Session {name}\n")
     file.write("=" * 80 + "\n")
 
 print("=" * 80)
-print(f"{json.dumps(args, indent=True)}\n")
+print(f"Log File for Training Session {name}\n")
 print("=" * 80)
 
 
