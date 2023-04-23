@@ -1,0 +1,34 @@
+{
+    "dataset": "/home/u1909943/MSc/ImagePairs",
+    "name":"SN8",
+    "loss":{"name":"mse"},
+    "batch_size": 4,
+    "epochs":150,
+    "learning_rate":0.001,
+    "sample_ids":[8,16,30],
+    "model":{
+        "name":"ShrinkNet:ShrinkNet_Residual4",
+        "args":{
+            "feature_channels":32,
+            "shrinking_channels":5,
+            "mapping_depth":4,
+            "kernels":[
+                [5,5],
+                [5,5],
+                [3,3],
+                [3,3],
+                [3,3],
+                [3,3],
+                [1,1],
+                [9,9]
+            ],
+            "types":[
+                "conv",
+                "dws",
+                "dws",
+                "dws"
+            ]
+        }
+    }
+
+}
