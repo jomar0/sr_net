@@ -27,7 +27,6 @@ class ConvBlock(nn.Module):
                         1, 1)
                 )
             )
-        self.activation = qnn.QuantReLU()
         self.initialise_weights(type=type)
 
     def initialise_weights(self, type='conv'):
@@ -50,6 +49,5 @@ class ConvBlock(nn.Module):
 
     def forward(self, output):
         output = self.conv(output)
-        output = self.activation(output)
         return output
 

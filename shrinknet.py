@@ -90,11 +90,11 @@ class ShrinkNet(nn.Module):
         return to_return
 
     def forward(self, out):
-        out = self.feature_extraction(out)
-        out = self.shrinking(out)
+        out = qnn.QuantReLU(self.feature_extraction(out))
+        out = qnn.QuantReLU(self.shrinking(out))
         for layer in self.mapping:
-            out = layer(out)
-        out = self.expanding(out)
+            out = qnn.QuantReLU(layer(out))
+        out = qnn.QuantReLU(self.expanding(out))
         out = self.deconvolution(out)
         return out
 
@@ -104,27 +104,27 @@ class ShrinkNet(nn.Module):
 class ShrinkNet_Residual1(ShrinkNet):
     # FSRCNN_ResNet with variable Residual Mapping Layers.
     def forward(self, out):
-        out = self.feature_extraction(out)
+        out = qnn.QuantReLU(self.feature_extraction(out))
         out = self.shrinking(out)
         temp = out
-        for layer in self.mapping:
-            out = layer(out)
-        out = out + temp
-        out = self.expanding(out)
+        for i, layer in enumerate(self.mapping):
+            out = layer(qnn.QuantReLU(out))
+        out = qnn.QuantReLU(out + temp)
+        out = qnn.QuantReLU(self.expanding(out))
         out = self.deconvolution(out)
         return out
 
 
-# adds a skip after every mapping layer, skipping the rest of the mapping layers
+# adds a skip over every mapping layer
 class ShrinkNet_Residual2(ShrinkNet):
     def forward(self, out):
-        out = self.feature_extraction(out)
+        out = qnn.QuantReLU(self.feature_extraction(out))
         out = self.shrinking(out)
         for mapping_layer in self.mapping:
             residual = out
-            out = mapping_layer(out)
+            out = mapping_layer(qnn.QuantReLU(out))
             out = out + residual
-        out = self.expanding(out)
+        out = qnn.QuantReLU(self.expanding(qnn.QuantReLU(out)))
         out = self.deconvolution(out)
         return out
 
@@ -132,14 +132,14 @@ class ShrinkNet_Residual2(ShrinkNet):
 # adds residual every other mapping layer
 class ShrinkNet_Residual3(ShrinkNet):
     def forward(self, out):
-        out = self.feature_extraction(out)
+        out = qnn.QuantReLU(self.feature_extraction(out))
         out = self.shrinking(out)
         for i, mapping_layer in enumerate(self.mapping):
             residual = out
-            out = mapping_layer(out)
+            out = mapping_layer(qnn.QuantReLU(out))
             if i % 2 == 0:
                 out = out + residual
-        out = self.expanding(out)
+        out = qnn.QuantReLU(self.expanding(qnn.QuantReLU(out)))
         out = self.deconvolution(out)
         return out
 
@@ -147,13 +147,13 @@ class ShrinkNet_Residual3(ShrinkNet):
 # skip to the end of mapping after every map layer
 class ShrinkNet_Residual4(ShrinkNet):
     def forward(self, out):
-        out = self.feature_extraction(out)
+        out = qnn.QuantReLU(self.feature_extraction(out))
         out = self.shrinking(out)
         skip = out
-        out = self.mapping[0](out)
-        out = self.mapping[1](out) + skip
-        out = self.mapping[2](out) + skip
-        out = self.mapping[3](out) + skip
-        out = self.expanding(out)
+        out = self.mapping[0](qnn.QuantReLU(out))
+        out = self.mapping[1](qnn.QuantReLU(out)) + skip
+        out = self.mapping[2](qnn.QuantReLU(out)) + skip
+        out = self.mapping[3](qnn.QuantReLU(out)) + skip
+        out = qnn.QuantReLU(self.expanding(qnn.QuantReLU(out)))
         out = self.deconvolution(out)
         return out

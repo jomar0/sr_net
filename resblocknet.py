@@ -29,6 +29,7 @@ class ResBlockNet(nn.Module):
                         kernel_size=tuple(config["mapping_blocks"][f"{i}"]["0"]["kernel"]),
                         type="dws",
                     ),
+                    qnn.QuantReLU(),
                     ConvBlock(
                         in_channels=config["mapping_blocks"][f"{i}"]["1"]["in_channels"],
                         out_channels=config["mapping_blocks"][f"{i}"]["1"]["out_channels"],
@@ -56,13 +57,13 @@ class ResBlockNet(nn.Module):
         initialise(self.output_layer)
 
     def forward(self, out):
-        out = self.input_layer(out)
+        out = qnn.QuantReLU(self.input_layer(out))
         for map_block in self.map_blocks:
             residual = out
             out = map_block(out)
-            out = out + residual
+            out = qnn.QuantReLU(out + residual)
         for hidden_layer in self.hidden_layers:
-            out + hidden_layer(out)
+            out = qnn.QuantReLU(hidden_layer(out))
         out = self.output_layer(out)
         return out
 
@@ -88,31 +89,35 @@ class ShrinkResBlockNet1(ResBlockNet):
             type="dws"
         )
     def forward(self, out):
-        out = self.input_layer(out)
+        out = qnn.QuantReLU(self.input_layer(out))
         out = self.shrinking(out)
+                            
         for map_block in self.map_blocks:
             residual = out
-            out = map_block(out)
+            out = map_block(qnn.QuantReLU(out))
             out = out + residual
-        out = self.hidden_layers(out)
-        out = self.expanding(out)
+        for hidden_layer in self.hidden_layers:
+            out = hidden_layer(qnn.QuantReLU(out))
+        out = qnn.QuantReLU(self.expanding(qnn.QuantReLU(out)))
         out = self.output_layer(out)
         return out
     
 # expand before hidden layers
 class ShrinkResBlockNet2(ShrinkResBlockNet1):
     def forward(self, out):
-        out = self.input_layer(out)
-        out = self.shrinking(out)
+
+        out = qnn.QuantReLU(self.input_layer(out))
+        out = self.shrinking(out)          
         for map_block in self.map_blocks:
             residual = out
-            out = map_block(out)
+            out = map_block(qnn.QuantReLU(out))
             out = out + residual
-        out = self.expanding(out)
-        out = self.hidden_layers(out)
-        out = self.output_layer(out)
+        out = self.expanding(qnn.QuantReLU(out))
+        for hidden_layer in self.hidden_layers:
+            out = hidden_layer(qnn.QuantReLU(out))
+        
+        out = self.output_layer(qnn.QuantReLU(out))
         return out
-
 
 
     

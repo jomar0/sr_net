@@ -37,8 +37,8 @@ class EVNet(nn.Module):
         initialise(self.output_layer)
         
     def forward(self, out):
-        out = self.input_layer(out)
+        out = qnn.QuantReLU(self.input_layer(out))
         for hidden_layer in self.hidden_layers:
-            out = hidden_layer(out)
+            out = qnn.QuantReLU(hidden_layer(out))
         out = self.output_layer(out)
         return out
