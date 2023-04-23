@@ -7,7 +7,6 @@ from shrinknet import *
 from resblocknet import *
 from evnet import *
 from util import SSIMLoss
-from pytorch_msssim import SSIM
 
 def create_dataloaders(training_dataset, evaluation_dataset, batch_size=16, num_workers=5):
     training_dataloader = DataLoader(dataset=training_dataset, batch_size=batch_size, num_workers=num_workers, pin_memory=True)
