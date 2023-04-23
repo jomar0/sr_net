@@ -7,11 +7,12 @@ from util import initialise
 
 class ResBlockNet(nn.Module):
     def __init__(self, config: dict, **kwargs):
+        self.config = config
         argspec = inspect.getfullargspec(self.__init__)[0][1:]
         argdict = dict(zip(argspec, argspec))
         argdict.update(kwargs)
         self.args = argdict
-        super(ResBlockNet, self)
+        super(ResBlockNet, self).__init__()
         self.input_layer = ConvBlock(
             in_channels=config["input_layer"]["in_channels"],
             out_channels=config["input_layer"]["out_channels"],
@@ -23,15 +24,15 @@ class ResBlockNet(nn.Module):
             self.map_blocks.append(
                 nn.Sequential(
                     ConvBlock(
-                        in_channels=config["mapping_blocks"][i][0]["in_channels"],
-                        out_channels=config["mapping_blocks"][i][0]["out_channels"],
-                        kernel_size=tuple(config["mapping_blocks"][i][0]["kernel"]),
+                        in_channels=config["mapping_blocks"][f"{i}"]["0"]["in_channels"],
+                        out_channels=config["mapping_blocks"][f"{i}"]["0"]["out_channels"],
+                        kernel_size=tuple(config["mapping_blocks"][f"{i}"]["0"]["kernel"]),
                         type="dws",
                     ),
                     ConvBlock(
-                        in_channels=config["mapping_blocks"][i][1]["in_channels"],
-                        out_channels=config["mapping_blocks"][i][1]["out_channels"],
-                        kernel_size=tuple(config["mapping_blocks"][i][0]["kernel"]),
+                        in_channels=config["mapping_blocks"][f"{i}"]["1"]["in_channels"],
+                        out_channels=config["mapping_blocks"][f"{i}"]["1"]["out_channels"],
+                        kernel_size=tuple(config["mapping_blocks"][f"{i}"]["0"]["kernel"]),
                         type="dws",
                     ),
                 )
@@ -39,9 +40,9 @@ class ResBlockNet(nn.Module):
         self.hidden_layers = nn.ModuleList()
         for i in range(len(config["hidden_layers"])):
             self.hidden_layers.append(ConvBlock(
-                in_channels=config["hidden_layers"][i]["in_channels"],
-                out_channels = config["hidden_layers"][i]["out_channels"],
-                kernel_size=tuple(config["hidden_layers"][i]["kernel"]),
+                in_channels=config["hidden_layers"][f"{i}"]["in_channels"],
+                out_channels = config["hidden_layers"][f"{i}"]["out_channels"],
+                kernel_size=tuple(config["hidden_layers"][f"{i}"]["kernel"]),
                 type="dws"
             ))
         self.output_layer = qnn.QuantConvTranspose2d(
@@ -60,8 +61,58 @@ class ResBlockNet(nn.Module):
             residual = out
             out = map_block(out)
             out = out + residual
+        for hidden_layer in self.hidden_layers:
+            out + hidden_layer(out)
+        out = self.output_layer(out)
+        return out
+
+#expand after hidden layers
+class ShrinkResBlockNet1(ResBlockNet):
+    def __init__(self, config: dict, **kwargs):
+        self.config = config
+        super(ShrinkResBlockNet1, self).__init__()
+        if "shrinking_layer" not in self.config:
+            raise KeyError("ShrinkResBlockNet must have a shrinking layer")
+        if "expanding_layer" not in self.config:
+            raise KeyError("ShrinkResBlockNet must have an expanding layer")
+        self.shrinking = ConvBlock(
+            in_channels=config["shrinking_layer"]["in_channels"],
+            out_channels=config["shrinking_layer"]["out_channels"],
+            kernel_size=tuple(config["shrinking_layer"]["kernel"]),
+            type="dws"
+        )
+        self.expanding = ConvBlock(
+            in_channels=config["expanding_layer"]["in_channels"],
+            out_channels=config["expanding_layer"]["out_channels"],
+            kernel_size=tuple(config["expanding_layer"]["kernel"]),
+            type="dws"
+        )
+    def forward(self, out):
+        out = self.input_layer(out)
+        out = self.shrinking(out)
+        for map_block in self.map_blocks:
+            residual = out
+            out = map_block(out)
+            out = out + residual
+        out = self.hidden_layers(out)
+        out = self.expanding(out)
+        out = self.output_layer(out)
+        return out
+    
+# expand before hidden layers
+class ShrinkResBlockNet2(ShrinkResBlockNet1):
+    def forward(self, out):
+        out = self.input_layer(out)
+        out = self.shrinking(out)
+        for map_block in self.map_blocks:
+            residual = out
+            out = map_block(out)
+            out = out + residual
+        out = self.expanding(out)
         out = self.hidden_layers(out)
         out = self.output_layer(out)
         return out
+
+
 
     

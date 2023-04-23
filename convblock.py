@@ -41,12 +41,12 @@ class ConvBlock(nn.Module):
             # Initalise DW weights
             nn.init.kaiming_normal_(
                 self.conv[0].weight, mode=self.mode, nonlinearity='conv2d')
-            nn.init.constant_(self.conv.bias, 0.01)
+            nn.init.constant_(self.conv[0].bias, 0.01)
 
             # Initalise PW weights
             nn.init.kaiming_normal_(
                 self.conv[1].weight, mode=self.mode, nonlinearity='relu')
-            nn.init.constant_(self.conv.bias, 0.01)
+            nn.init.constant_(self.conv[1].bias, 0.01)
 
     def forward(self, output):
         output = self.conv(output)

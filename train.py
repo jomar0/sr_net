@@ -29,7 +29,7 @@ def train(model, dataloaders, epochs, learning_rate, criterion, log_path=None, d
 
             optimiser.zero_grad()
 
-            outputs = model(inputs)
+            outputs = model(inputs).clamp(0,1)
             loss = criterion(outputs, ground_truths)
             loss.backward()
             optimiser.step()

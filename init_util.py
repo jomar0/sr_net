@@ -7,6 +7,7 @@ from shrinknet import *
 from resblocknet import *
 from evnet import *
 from util import SSIMLoss
+from pytorch_msssim import SSIM
 
 def create_dataloaders(training_dataset, evaluation_dataset, batch_size=16, num_workers=5):
     training_dataloader = DataLoader(dataset=training_dataset, batch_size=batch_size, num_workers=num_workers, pin_memory=True)
@@ -116,7 +117,7 @@ def create_model(args):
     elif superclass == "EVNet":
         required_params = ["kernels", "channels"]
     elif superclass == "ResBlockNet":
-        required_params = ["config"]
+        required_params = ["input_layer", "mapping_blocks", "hidden_layers", "output_layer"]
     else:
         raise ValueError(f"Invalid model superclass: {superclass}")
 
@@ -125,6 +126,8 @@ def create_model(args):
             raise ValueError(
                 f"Missing required parameter '{param}' for model '{model_name}'"
             )
+    
+
 
     # Call appropriate subfunction to create model object instance
     if superclass == "ShrinkNet":
@@ -171,7 +174,12 @@ def create_model(args):
     elif superclass == "EVNet":
         return EVNet(kernels=[tuple(x) for x in model_config["kernels"]], channels=model_config["channels"])
     elif superclass == "ResBlockNet":
-        return ResBlockNet(config=model_config)
+        if subclass == "ShrinkResBlockNet1":
+            return ShrinkResBlockNet1(config=model_config)
+        elif subclass == "ShrinkResBlockNet2":
+            return ShrinkResBlockNet2(config=model_config)
+        else:
+            return ResBlockNet(config=model_config)
 
 
 def create_loss(args):

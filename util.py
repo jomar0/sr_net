@@ -5,6 +5,7 @@ from PIL import Image
 import torch.nn.functional as F
 import numpy as np
 from skimage.metrics import structural_similarity
+import math
 
 def generate_sample(id, dataset, model, device="cuda"):
     to_PIL = transforms.ToPILImage()
@@ -52,53 +53,41 @@ def psnr(y_pred, y_true):
     value = 20 * np.log10(1.0) - 10 * np.log10(mse)
     return value
 
-class SSIMLoss(nn.Module):
-    def __init__(self, window_size=11, size_average=True):
+class SSIMLoss(torch.nn.Module):
+    def __init__(self, window_size=11, size_average=True, sigma=1.5):
         super(SSIMLoss, self).__init__()
         self.window_size = window_size
         self.size_average = size_average
-        self.channel = 1
+        self.sigma = sigma
+        self.window = self.create_window(window_size, sigma)
 
-    def create_window(self):
-        # Create a 1D Gaussian window
-        window = torch.Tensor([np.exp(-(x - self.window_size//2)**2/float(2*2)) for x in range(self.window_size)])
-        # Make it 2D
-        window_2d = window.outer(window)
-        # Make it 3D with one channel
-        window_3d = window_2d.unsqueeze(0).unsqueeze(0)
-        # Repeat the 3D window for all channels
-        window_3d = window_3d.repeat(self.channel, 1, 1, 1)
-        return window_3d
+    def gaussian(self, window_size, sigma):
+        gauss = torch.Tensor([math.exp(-(x - window_size//2)**2/float(2*sigma**2)) for x in range(window_size)])
+        return gauss/gauss.sum()
 
-    def forward(self, img1, img2):
-        if len(img1.shape) != 4 or len(img2.shape) != 4:
-            raise ValueError("Input tensors must have a batch dimension")
+    def create_window(self, window_size, sigma):
+        _1D_window = self.gaussian(window_size, sigma)
+        _2D_window = _1D_window.outer(_1D_window)
+        return _2D_window.view(1, 1, window_size, window_size).to(torch.device("cuda"))
 
-        if img1.shape != img2.shape:
-            raise ValueError("Input tensors must have the same shape")
-
-        if img1.shape[1] != 1:
-            raise ValueError("Input tensors must be grayscale")
-
-        window = self.create_window()
-
-        mu1 = F.conv2d(img1, window, padding=self.window_size//2, groups=self.channel)
-        mu2 = F.conv2d(img2, window, padding=self.window_size//2, groups=self.channel)
+    def forward(self, x, y):
+        mu1 = F.conv2d(x, self.window, padding=self.window_size//2, groups=x.shape[1])
+        mu2 = F.conv2d(y, self.window, padding=self.window_size//2, groups=y.shape[1])
 
         mu1_sq = mu1.pow(2)
         mu2_sq = mu2.pow(2)
         mu1_mu2 = mu1 * mu2
 
-        sigma1_sq = F.conv2d(img1 * img1, window, padding=self.window_size//2, groups=self.channel) - mu1_sq
-        sigma2_sq = F.conv2d(img2 * img2, window, padding=self.window_size//2, groups=self.channel) - mu2_sq
-        sigma12 = F.conv2d(img1 * img2, window, padding=self.window_size//2, groups=self.channel) - mu1_mu2
+        sigma1_sq = F.conv2d(x * x, self.window, padding=self.window_size//2, groups=x.shape[1]) - mu1_sq
+        sigma2_sq = F.conv2d(y * y, self.window, padding=self.window_size//2, groups=y.shape[1]) - mu2_sq
+        sigma12 = F.conv2d(x * y, self.window, padding=self.window_size//2, groups=x.shape[1]) - mu1_mu2
 
-        c1 = (0.01 * 255)**2
-        c2 = (0.03 * 255)**2
+        C1 = (0.01)**2
+        C2 = (0.03)**2
 
-        ssim_map = ((2 * mu1_mu2 + c1) * (2 * sigma12 + c2)) / ((mu1_sq + mu2_sq + c1) * (sigma1_sq + sigma2_sq + c2))
+        ssim_map = ((2 * mu1_mu2 + C1) * (2 * sigma12 + C2)) / ((mu1_sq + mu2_sq + C1) * (sigma1_sq + sigma2_sq + C2))
 
         if self.size_average:
             return torch.mean((1 - ssim_map) / 2)
         else:
-            return torch.sum((1 - ssim_map) / 2)
+            return torch.mean(torch.mean((1 - ssim_map) / 2, dim=(2,3)), dim=1)
