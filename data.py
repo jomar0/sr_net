@@ -1,6 +1,6 @@
 from torch.utils.data import Dataset
 from torchvision import transforms
-import utils
+from util import extract_y
 from PIL import Image
 from pathlib import Path
 
@@ -10,7 +10,7 @@ class ImagePairs(Dataset):
         self.directory = Path(dataset_directory)
         self.count = len(list((self.directory / 'HR').glob('*.png')))
         self.transforms = transforms.Compose([
-            transforms.Lambda(utils.extract_y),
+            transforms.Lambda(extract_y),
             transforms.ToTensor()
         ])
 

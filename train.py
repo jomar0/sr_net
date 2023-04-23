@@ -1,18 +1,16 @@
 import torch
-import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader
 from tqdm import tqdm
-from utils import psnr, Model, ssim, SSIMLoss
-import statistics
-import copy
+from util import psnr, Model, ssim, SSIMLoss
 import os
+from init_util import *
 
 
 def train(model, dataloaders, epochs, learning_rate, criterion, log_path=None, device='cuda'):
     save_state = Model()
     optimiser = optim.Adam(params=model.parameters(), lr=learning_rate)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimiser, mode='min', factor=0.1, patience=3)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer=optimiser, mode='min', factor=0.1, patience=3)
     training_dataloader, evaluation_dataloader = dataloaders
 
     device = torch.device(device)
@@ -60,7 +58,7 @@ def train(model, dataloaders, epochs, learning_rate, criterion, log_path=None, d
             eval_psnr /= len(evaluation_dataloader.dataset)
             eval_ssim /= len(evaluation_dataloader.dataset)
             save_state.update_eval(epoch=epoch+1, model=model,
-                              psnr=eval_psnr, ssim=eval_ssim)
+                                   psnr=eval_psnr, ssim=eval_ssim)
         progress_bar.close()
         status = f"Epoch {epoch+1}/{epochs}, Loss: {epoch_loss:.6f}, PSNR: {eval_psnr:.6f} dB, SSIM: {eval_ssim:.6f}"
         print(status)
@@ -95,7 +93,6 @@ def test(model, dataloader, criterion=None, log_path=None, device='cuda'):
         eval_ssim /= len(dataloader.dataset)
         eval_loss /= len(dataloader.dataset)
 
-        
         progress_bar.close()
         status = f"Loss: {eval_loss:.6f}, PSNR: {eval_psnr:.6f} dB, SSIM: {eval_ssim:.6f}"
         print(status)
