@@ -95,7 +95,7 @@ def test(model, dataloader, criterion=None, log_path=None, device='cuda'):
             loss = criterion(outputs, ground_truths)
             eval_loss += loss.item()
             eval_psnr += psnr(outputs, ground_truths)
-            eval_ssim += psnr(outputs, ground_truths)
+            eval_ssim += ssim(outputs, ground_truths)
             progress_bar.update(len(inputs))
         eval_psnr /= len(dataloader.dataset)
         eval_ssim /= len(dataloader.dataset)
@@ -108,4 +108,5 @@ def test(model, dataloader, criterion=None, log_path=None, device='cuda'):
             if os.path.exists(log_path):
                 with open(log_path, "a") as file:
                     file.write(status + "\n")
+                    
     return eval_ssim, eval_psnr, eval_loss

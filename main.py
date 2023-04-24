@@ -55,12 +55,12 @@ with open(log_path, "a") as file:
 
 
 sample_path = create_sample_folder(os.path.join(cmd_args.path, "samples"))
-same_epoch = results.data["best_ssim"]["epoch"] != results.data["best_psnr"]["epoch"]
+same_epoch = results.data["best_ssim"]["epoch"] == results.data["best_psnr"]["epoch"]
 for metric in (["ssim", "psnr"] if same_epoch else ["ssim"]):
     model.load_state_dict(results.data[f"best_{metric}"]["model"])
     val_ssim, val_psnr, val_loss = test(
         model=model, dataloader=DataLoader(testing, batch_size=1), criterion=create_loss(args), device="cuda")
-    results.update_test(metric if same_epoch else "both", val_psnr, val_ssim, val_loss, loss_type=loss.__class__.__name__)
+    results.update_test(metric if not same_epoch else "both", val_psnr, val_ssim, val_loss, loss_type=loss.__class__.__name__)
 
     
     #generate the samples
@@ -81,18 +81,24 @@ for metric in (["ssim", "psnr"] if same_epoch else ["ssim"]):
 # ssim params
 model.load_state_dict(results.data["best_ssim"]["model"])
 params = sum(p.numel() for p in model.parameters())
+epoch = results.data["best_ssim"]["epoch"]
 results.data["best_ssim"]["model_params"] = params
 with open(log_path, "a") as file:
     file.write(f"Best SSIM - Number of Parameters: {params}\n")
+    file.write(f"Best SSIM - Epoch: {epoch}\n")
 print(f"Best SSIM - Number of Parameters: {params}")
+print(f"Best SSIM - Epoch: {epoch}\n")
 
 # psnr params
+epoch = results.data["best_psnr"]["epoch"]
 model.load_state_dict(results.data["best_psnr"]["model"])
 params = sum(p.numel() for p in model.parameters())
 results.data["best_psnr"]["model_params"] = params
 with open(log_path, "a") as file:
     file.write(f"Best PSNR - Number of Parameters: {params}\n")
+    file.write(f"Best PSNR - Epoch: {epoch}\n")
 print(f"Best PSNR - Number of Parameters: {params}")
+print(f"Best PSNR - Epoch: {epoch}\n")
 
 
 results.save(model_path)

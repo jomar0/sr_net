@@ -64,7 +64,7 @@ class ResBlockNet(nn.Module):
             in_channels=config["output_layer"]["in_channels"],
             out_channels=config["output_layer"]["out_channels"],
             kernel_size=tuple(config["output_layer"]["kernel"]),
-            padding=config["output_layer"]["kernel"][0] // 2,
+            padding=(config["output_layer"]["kernel"][0] // 2, config["output_layer"]["kernel"][1] // 2),
             stride=2,
             output_padding=1,
         )
@@ -118,8 +118,20 @@ class ShrinkResBlockNet1(ResBlockNet):
         return out
 
 
-# expand before hidden layers
-class ShrinkResBlockNet2(ShrinkResBlockNet1):
+# no expand
+class ShrinkResBlockNet2(ResBlockNet):
+    def __init__(self, config: dict, **kwargs):
+        self.config = config
+        super(ShrinkResBlockNet1, self).__init__()
+        if "shrinking_layer" not in self.config:
+            raise KeyError("ShrinkResBlockNet must have a shrinking layer")
+        self.shrinking = ConvBlock(
+            in_channels=config["shrinking_layer"]["in_channels"],
+            out_channels=config["shrinking_layer"]["out_channels"],
+            kernel_size=tuple(config["shrinking_layer"]["kernel"]),
+            type="dws",
+        )
+
     def forward(self, out):
         out = self.input_layer(out)
         out = self.shrinking(self.activation(out))
@@ -127,7 +139,7 @@ class ShrinkResBlockNet2(ShrinkResBlockNet1):
             residual = out
             out = map_block(self.activation(out))
             out = out + residual
-        out = self.expanding(self.activation(out))
+        #out = self.expanding(self.activation(out))
         for hidden_layer in self.hidden_layers:
             out = hidden_layer(self.activation(out))
         out = self.output_layer(self.activation(out))
