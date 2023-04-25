@@ -68,17 +68,20 @@ def train(model, dataloaders, epochs, learning_rate, train_criterion, eval_crite
                 progress_bar.set_postfix_str(
                     f'SSIM: {ssim_so_far:.6f} PSNR: {psnr_so_far:.6f} dB')
 
-            eval_psnr /= len(evaluation_dataloader.dataset)
-            eval_ssim /= len(evaluation_dataloader.dataset)
-            eval_loss /= len(evaluation_dataloader.dataset)
-            save_state.update_eval(epoch=epoch+1, model=model, psnr=eval_psnr, ssim=eval_ssim)
+        eval_psnr /= len(evaluation_dataloader.dataset)
+        eval_ssim /= len(evaluation_dataloader.dataset)
+        eval_loss /= len(evaluation_dataloader.dataset)
+
+        save_state.update_eval(epoch=epoch+1, model=model, psnr=eval_psnr, ssim=eval_ssim)
+
+        stoploss.update(eval_loss)
+
         progress_bar.close()
-        status = f"Epoch {epoch+1}/{epochs}, Training Loss: {epoch_loss:.6f}, Eval Loss: {eval_loss:.6f}, PSNR: {eval_psnr:.6f} dB, SSIM: {eval_ssim:.6f}\n"
+
+        status = f"Epoch {epoch+1}/{epochs}, Training Loss: {epoch_loss:.6f}, Eval Loss: {eval_loss:.6f}, PSNR: {eval_psnr:.6f} dB, SSIM: {eval_ssim:.6f}, Stoploss Counter: {stoploss.counter}\n"
         print(status)
         with open(log_path, "a") as file:
             file.write(status + "\n")
-
-        stoploss.update(eval_loss)
 
         if stoploss.stop:
             print("Stoploss patience reached, stopping")
