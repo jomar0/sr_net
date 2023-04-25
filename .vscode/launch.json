@@ -10,7 +10,7 @@
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "args":"C:\\Users\\josep\\Cloud\\Workspaces\\MSc\\configs\\test1",
+            "args":"/home/u1909943/MSc/sr_net1/results/RN2",
             "console": "integratedTerminal",
             "justMyCode": true
         }

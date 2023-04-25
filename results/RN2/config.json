@@ -13,7 +13,7 @@
         30
     ],
     "model": {
-        "name": "ResBlockNet:",
+        "name": "ResBlockNet:ShrinkResBlockNet1",
         "args": {
             "input_layer": {
                 "in_channels": 1,
@@ -26,8 +26,8 @@
             "shrinking_layer":{
                 "in_channels": 32,
                 "out_channels": 8,
-                "kernel": [3,3],
-            "mapping_blocks": {
+                "kernel": [1,1]
+	    },"mapping_blocks": {
                 "0": {
                     "0": {
                         "in_channels": 8,
@@ -41,13 +41,12 @@
                         "in_channels": 8,
                         "out_channels": 8,
                         "kernel": [
-                            1,
+                             1,
                             5
                         ]
                     }
                 }
-                }
-            },
+                },
             "hidden_layers":{
                 "0": {
                     "in_channels": 8,

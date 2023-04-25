@@ -1,0 +1,51 @@
+================================================================================
+Log File for Training Session RN1
+================================================================================
+Epoch 1/150, Loss: 0.002144, PSNR: 32.119340 dB, SSIM: 0.897945
+
+Epoch 2/150, Loss: 0.001322, PSNR: 32.571143 dB, SSIM: 0.905482
+
+Epoch 3/150, Loss: 0.001268, PSNR: 32.174110 dB, SSIM: 0.903967
+
+Epoch 4/150, Loss: 0.001208, PSNR: 32.555566 dB, SSIM: 0.910232
+
+Epoch 5/150, Loss: 0.001184, PSNR: 32.514617 dB, SSIM: 0.912259
+
+Epoch 6/150, Loss: 0.001154, PSNR: 33.042013 dB, SSIM: 0.912172
+
+Epoch 7/150, Loss: 0.001147, PSNR: 33.104010 dB, SSIM: 0.914344
+
+Epoch 8/150, Loss: 0.001124, PSNR: 33.190663 dB, SSIM: 0.915008
+
+Epoch 9/150, Loss: 0.001113, PSNR: 33.291601 dB, SSIM: 0.918278
+
+Epoch 10/150, Loss: 0.001108, PSNR: 33.241056 dB, SSIM: 0.917563
+
+Epoch 11/150, Loss: 0.001092, PSNR: 33.026388 dB, SSIM: 0.917145
+
+Epoch 12/150, Loss: 0.001080, PSNR: 33.137381 dB, SSIM: 0.915892
+
+Epoch 13/150, Loss: 0.001077, PSNR: 31.605556 dB, SSIM: 0.918307
+
+Epoch 14/150, Loss: 0.001069, PSNR: 33.190757 dB, SSIM: 0.918140
+
+Epoch 15/150, Loss: 0.001061, PSNR: 33.318743 dB, SSIM: 0.915966
+
+Epoch 16/150, Loss: 0.001053, PSNR: 32.326936 dB, SSIM: 0.920893
+
+Epoch 17/150, Loss: 0.001048, PSNR: 33.491164 dB, SSIM: 0.921951
+
+Epoch 18/150, Loss: 0.001043, PSNR: 32.139506 dB, SSIM: 0.918228
+
+Epoch 19/150, Loss: 0.001040, PSNR: 32.607729 dB, SSIM: 0.918703
+
+Epoch 20/150, Loss: 0.001034, PSNR: 33.634468 dB, SSIM: 0.922538
+
+Epoch 21/150, Loss: 0.001031, PSNR: 31.652345 dB, SSIM: 0.917637
+
+Epoch 22/150, Loss: 0.001025, PSNR: 33.642879 dB, SSIM: 0.921203
+
+Epoch 23/150, Loss: 0.001044, PSNR: 33.701792 dB, SSIM: 0.923618
+
+Epoch 24/150, Loss: 0.001012, PSNR: 33.258877 dB, SSIM: 0.923988
+

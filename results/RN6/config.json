@@ -38,7 +38,7 @@
                     }
                 }
                 }
-            },
+            ,
             "hidden_layers":{
                 "0": {
                     "in_channels": 32,
@@ -70,7 +70,7 @@
                 "out_channels":1,
                 "kernel":[5,5]
             }
-        },
+        }},
 "sample_ids": [
     8,
     16,

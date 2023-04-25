@@ -71,7 +71,7 @@ for metric in (["ssim", "psnr"] if same_epoch else ["ssim"]):
         print("No Samples Specified, using default samples")
         sample_ids = [16,8,30]
     for i in sample_ids:
-        sr, hr = generate_sample(i, testing, model)
+        sr, hr = generate_sample(i, evaluation, model)
         name_base = str(i).zfill(3)
         sr = sr.convert("RGB")
         hr = hr.convert("RGB")

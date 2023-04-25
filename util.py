@@ -91,3 +91,19 @@ class SSIMLoss(torch.nn.Module):
             return torch.mean((1 - ssim_map) / 2)
         else:
             return torch.mean(torch.mean((1 - ssim_map) / 2, dim=(2,3)), dim=1)
+        
+class StopLoss:
+    def __init__(self, patience=10):
+        self.patience = patience
+        self.counter = 0
+        self.best_score = None
+        self.stop = False
+
+    def update(self, eval_loss):
+        score = -eval_loss
+        if self.best_score is None:
+            self.best_score = score
+        elif score < self.best_score:
+            self.counter +=1
+            if self.counter >= self.patience:
+                self.stop = True

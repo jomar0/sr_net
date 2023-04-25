@@ -22,7 +22,7 @@ class ResBlockNet(nn.Module):
         self.map_blocks = nn.ModuleList()
         for i in range(len(config["mapping_blocks"])):
             self.map_blocks.append(
-                nn.Sequential(
+                nn.ModuleList([
                     ConvBlock(
                         in_channels=config["mapping_blocks"][f"{i}"]["0"][
                             "in_channels"
@@ -48,7 +48,8 @@ class ResBlockNet(nn.Module):
                         ),
                         type="dws",
                     ),
-                )
+                ])
+                
             )
         self.hidden_layers = nn.ModuleList()
         for i in range(len(config["hidden_layers"])):
@@ -69,12 +70,15 @@ class ResBlockNet(nn.Module):
             output_padding=1,
         )
         initialise(self.output_layer)
+        self.activation = qnn.QuantReLU()
 
     def forward(self, out):
+        pass
         out = self.input_layer(out)
         for map_block in self.map_blocks:
             residual = out
-            out = map_block(self.activation(out))
+            for map_layer in map_block:
+                out = map_layer(self.activation(out))
             out = out + residual
         for hidden_layer in self.hidden_layers:
             out = hidden_layer(self.activation(out))
@@ -86,7 +90,7 @@ class ResBlockNet(nn.Module):
 class ShrinkResBlockNet1(ResBlockNet):
     def __init__(self, config: dict, **kwargs):
         self.config = config
-        super(ShrinkResBlockNet1, self).__init__()
+        super(ShrinkResBlockNet1, self).__init__(config=config)
         if "shrinking_layer" not in self.config:
             raise KeyError("ShrinkResBlockNet must have a shrinking layer")
         if "expanding_layer" not in self.config:
@@ -105,11 +109,13 @@ class ShrinkResBlockNet1(ResBlockNet):
         )
 
     def forward(self, out):
+        pass
         out = self.input_layer(out)
         out = self.shrinking(self.activation(out))
         for map_block in self.map_blocks:
             residual = out
-            out = map_block(self.activation(out))
+            for map_layer in map_block:
+                out = map_layer(self.activation(out))
             out = out + residual
         for hidden_layer in self.hidden_layers:
             out = hidden_layer(self.activation(out))
@@ -122,7 +128,7 @@ class ShrinkResBlockNet1(ResBlockNet):
 class ShrinkResBlockNet2(ResBlockNet):
     def __init__(self, config: dict, **kwargs):
         self.config = config
-        super(ShrinkResBlockNet1, self).__init__()
+        super(ShrinkResBlockNet2, self).__init__(config=config)
         if "shrinking_layer" not in self.config:
             raise KeyError("ShrinkResBlockNet must have a shrinking layer")
         self.shrinking = ConvBlock(
@@ -137,7 +143,8 @@ class ShrinkResBlockNet2(ResBlockNet):
         out = self.shrinking(self.activation(out))
         for map_block in self.map_blocks:
             residual = out
-            out = map_block(self.activation(out))
+            for map_layer in map_block:
+                out = map_layer(self.activation(out))
             out = out + residual
         #out = self.expanding(self.activation(out))
         for hidden_layer in self.hidden_layers:

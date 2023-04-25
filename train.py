@@ -1,13 +1,14 @@
 import torch
 import torch.optim as optim
 from tqdm import tqdm
-from util import psnr, ssim, SSIMLoss
+from util import psnr, ssim, SSIMLoss, StopLoss
 from model import Model
 import os
 from init_util import *
 
 
-def train(model, dataloaders, epochs, learning_rate, criterion, log_path=None, device='cuda'):
+def train(model, dataloaders, epochs, learning_rate, train_criterion, eval_criterion, log_path=None, device='cuda'):
+    stoploss = StopLoss(10)
     save_state = Model()
     optimiser = optim.Adam(params=model.parameters(), lr=learning_rate)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -30,7 +31,7 @@ def train(model, dataloaders, epochs, learning_rate, criterion, log_path=None, d
             optimiser.zero_grad()
 
             outputs = model(inputs).clamp(0,1)
-            loss = criterion(outputs, ground_truths)
+            loss = train_criterion(outputs, ground_truths)
             loss.backward()
             optimiser.step()
             progress_bar.update(len(inputs))
@@ -46,12 +47,16 @@ def train(model, dataloaders, epochs, learning_rate, criterion, log_path=None, d
             evaluation_dataloader.dataset), dynamic_ncols=True)
         eval_psnr = 0.0
         eval_ssim = 0.0
+        eval_loss = 0.0
         with torch.no_grad():
             for input, ground_truth in evaluation_dataloader:
                 input = input.to(device)  # pop them on the GPU, again
                 ground_truth = ground_truth.to(device)
 
                 output = model(input).clamp(0.0, 1.0)
+
+                loss = eval_criterion(output, ground_truth)
+                eval_loss += loss.item()
 
                 eval_psnr += psnr(output, ground_truth)
                 eval_ssim += ssim(output, ground_truth)
@@ -65,20 +70,27 @@ def train(model, dataloaders, epochs, learning_rate, criterion, log_path=None, d
 
             eval_psnr /= len(evaluation_dataloader.dataset)
             eval_ssim /= len(evaluation_dataloader.dataset)
+            eval_loss /= len(evaluation_dataloader.dataset)
             save_state.update_eval(epoch=epoch+1, model=model, psnr=eval_psnr, ssim=eval_ssim)
         progress_bar.close()
-        status = f"Epoch {epoch+1}/{epochs}, Loss: {epoch_loss:.6f}, PSNR: {eval_psnr:.6f} dB, SSIM: {eval_ssim:.6f}\n"
+        status = f"Epoch {epoch+1}/{epochs}, Training Loss: {epoch_loss:.6f}, Eval Loss: {eval_loss:.6f}, PSNR: {eval_psnr:.6f} dB, SSIM: {eval_ssim:.6f}\n"
         print(status)
-        if log_path is not None:
-            if os.path.exists(log_path):
-                with open(log_path, "a") as file:
-                    file.write(status + "\n")
+        with open(log_path, "a") as file:
+            file.write(status + "\n")
+
+        stoploss.update(eval_loss)
+
+        if stoploss.stop:
+            print("Stoploss patience reached, stopping")
+            with open(log_path, "a") as file:
+                file.write("Stoploss patience reached, stopping\n")
+            break
     return save_state
 
 
-def test(model, dataloader, criterion=None, log_path=None, device='cuda'):
-    if criterion == None:
-        criterion = SSIMLoss()
+def test(model, dataloader, test_criterion=None, log_path=None, device='cuda'):
+    if test_criterion == None:
+        test_criterion = SSIMLoss()
     model.to(device)
     model.eval()
     eval_psnr = 0.0
@@ -90,9 +102,8 @@ def test(model, dataloader, criterion=None, log_path=None, device='cuda'):
         for inputs, ground_truths in dataloader:
             inputs = inputs.to(device)
             ground_truths = ground_truths.to(device)
-
             outputs = model(inputs).clamp(0.0, 1.0)
-            loss = criterion(outputs, ground_truths)
+            loss = test_criterion(outputs, ground_truths)
             eval_loss += loss.item()
             eval_psnr += psnr(outputs, ground_truths)
             eval_ssim += ssim(outputs, ground_truths)

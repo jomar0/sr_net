@@ -1,13 +1,13 @@
 {
     "dataset": "/home/u1909943/MSc/ImagePairs",
-    "name":"SN7",
+    "name":"SN13",
     "loss":{"name":"mse"},
     "batch_size": 4,
     "epochs":150,
     "learning_rate":0.001,
     "sample_ids":[8,16,30],
     "model":{
-        "name":"ShrinkNet:ShrinkNet_Residual3",
+        "name":"ShrinkNet",
         "args":{
             "feature_channels":32,
             "shrinking_channels":5,
@@ -15,8 +15,8 @@
             "kernels":[
                 [5,5],
                 [1,1],
-                [3,3],
-                [3,3],
+                [1,5],
+                [1,5],
                 [3,3],
                 [3,3],
                 [1,1],
